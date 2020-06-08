@@ -1,9 +1,11 @@
 import setuptools
 
+import aiogram_scenario
+
 
 setuptools.setup(
     name="aiogram_scenario",
-    version="0.0.1",
+    version=aiogram_scenario.__version__,
     packages=[
         "aiogram_scenario"
     ],
