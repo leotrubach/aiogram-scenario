@@ -1,5 +1,5 @@
 from .scenario import Scenario
-from .state import State, HandlersRegistrar
+from .state import AbstractState, HandlersRegistrar
 from .states_map import StatesMap
 from .middleware import ScenarioMiddleware
 

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from aiogram import Dispatcher
 
 
-class State(ABC):
+class AbstractState(ABC):
     """ An abstract state class, used to define eigenstates.
 
         To describe your own state:
@@ -35,7 +35,7 @@ class State(ABC):
 class HandlersRegistrar:
     """ Handlers registrar, used to register handlers for a specific state. """
 
-    def __init__(self, dispatcher: Dispatcher, state: State):
+    def __init__(self, dispatcher: Dispatcher, state: AbstractState):
 
         self._dispatcher = dispatcher
         self._state = state
