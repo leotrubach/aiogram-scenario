@@ -22,7 +22,7 @@ class ScenarioMiddleware(BaseMiddleware):
         pointing_handler = current_handler.get()
         data["pointing_handler"] = pointing_handler
 
-    async def execute_transition(self, results: list, data: dict) -> None:
+    async def execute_transition(self, update, results: list, data: dict) -> None:
         """ Executes request for transition to the next target_state. """
 
         pointing_handler = data.get("pointing_handler")
@@ -35,11 +35,14 @@ class ScenarioMiddleware(BaseMiddleware):
                 if target_state is not None:
                     user = User.get_current()
                     chat = Chat.get_current()
+                    handler_args = (update,)
 
                     await self._scenario.execute_transition(
                         target_state=target_state,
                         user_id=user.id,
-                        chat_id=chat.id if chat is not None else None
+                        chat_id=chat.id if chat is not None else None,
+                        *handler_args,
+                        **data
                     )
 
     async def on_process_message(self, _, data: dict):
@@ -78,38 +81,38 @@ class ScenarioMiddleware(BaseMiddleware):
 
         self.save_pointing_handler(data)
 
-    async def on_post_process_message(self, _, results: list, data: dict):
+    async def on_post_process_message(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_edited_message(self, _, results: list, data: dict):
+    async def on_post_process_edited_message(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_channel_post(self, _, results: list, data: dict):
+    async def on_post_process_channel_post(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_edited_channel_post(self, _, results: list, data: dict):
+    async def on_post_process_edited_channel_post(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_inline_query(self, _, results: list, data: dict):
+    async def on_post_process_inline_query(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_chosen_inline_result(self, _, results: list, data: dict):
+    async def on_post_process_chosen_inline_result(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_callback_query(self, _, results: list, data: dict):
+    async def on_post_process_callback_query(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_shipping_query(self, _, results: list, data: dict):
+    async def on_post_process_shipping_query(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
 
-    async def on_post_process_pre_checkout_query(self, _, results: list, data: dict):
+    async def on_post_process_pre_checkout_query(self, update, results: list, data: dict):
 
-        await self.execute_transition(results, data)
+        await self.execute_transition(update, results, data)
