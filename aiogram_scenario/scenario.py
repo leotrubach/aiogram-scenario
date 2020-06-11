@@ -26,8 +26,6 @@ class Scenario:
         self.states_map = states_map
         self._dispatcher = dispatcher
 
-        self._register_handlers()
-
     async def execute_transition(self, target_state: AbstractState, user_id: Optional[int] = None,
                                  chat_id: Optional[int] = None, *handler_args, **context_kwargs: dict):
         """ Performs a state transition operation. """
@@ -42,7 +40,7 @@ class Scenario:
         context_kwargs = _get_transition_args(target_state.process_transition, **context_kwargs)
         await target_state.process_transition(*handler_args, **context_kwargs)
 
-    def _register_handlers(self):
+    def register_handlers(self):
         """ Registers all states map handlers. """
 
         for state in self.states_map.states:
