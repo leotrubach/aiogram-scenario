@@ -5,9 +5,9 @@ from aiogram import Dispatcher
 
 
 class AbstractState(ABC):
-    """ An abstract state class, used to define eigenstates.
+    """ An abstract target_state class, used to define eigenstates.
 
-        To describe your own state:
+        To describe your own target_state:
             - Inherit from this class.
             - Define asynchronous handlers.
             - Register the new handlers in the register_handlers abstract method.
@@ -18,8 +18,8 @@ class AbstractState(ABC):
 
         self.name = self.__class__.__name__
 
-    async def process_transition(self, *args) -> None:
-        """ Performs state transition logic.
+    async def process_transition(self, *args, **kwargs) -> None:
+        """ Performs target_state transition logic.
             It has all the same arguments as the handler.
         """
 
@@ -27,13 +27,13 @@ class AbstractState(ABC):
 
     @abstractmethod
     def register_handlers(self, registrar: HandlersRegistrar) -> None:
-        """ Registers state handlers. """
+        """ Registers target_state handlers. """
 
         pass
 
 
 class HandlersRegistrar:
-    """ Handlers registrar, used to register handlers for a specific state. """
+    """ Handlers registrar, used to register handlers for a specific target_state. """
 
     def __init__(self, dispatcher: Dispatcher, state: AbstractState):
 

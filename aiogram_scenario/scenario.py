@@ -1,65 +1,50 @@
-from typing import Callable
+from typing import Optional
 import inspect
-from inspect import FullArgSpec
 
-from aiogram.dispatcher import Dispatcher, FSMContext
+from aiogram.dispatcher import Dispatcher
 
 from .states_map import StatesMap
-from .state import HandlersRegistrar
+from .state import AbstractState, HandlersRegistrar
 
 
-def _get_partial_data(spec: FullArgSpec, kwargs: dict):
+def _get_transition_args(process_obj, **context_kwargs: dict) -> dict:
 
+    spec = inspect.getfullargspec(process_obj)
     if spec.varkw:
-        return kwargs
+        return context_kwargs
 
-    return {k: v for k, v in kwargs.items() if k in spec.args}
+    return {k: v for k, v in context_kwargs.items() if k in spec.args}
 
 
 class Scenario:
-    """ The scenario class allows registering state map handlers,
+    """ The scenario class allows registering target_state map handlers,
         as well as performing transitions between them.
     """
 
-    def __init__(self, states_map: StatesMap):
+    def __init__(self, states_map: StatesMap, dispatcher: Dispatcher):
 
-        self._states_map = states_map
-        self._handlers_is_registered = False
+        self.states_map = states_map
+        self._dispatcher = dispatcher
 
-    def register_handlers(self, dispatcher: Dispatcher):
-        """ Registers all states map handlers. """
+        self._register_handlers()
 
-        if not self._handlers_is_registered:
-            for state in self._states_map.states:
-                registrar = HandlersRegistrar(dispatcher, state=state)
-                state.register_handlers(registrar)
-            self._handlers_is_registered = True
-        else:
-            raise RuntimeError("handlers are already registered!")
+    async def execute_transition(self, target_state: AbstractState, user_id: Optional[int] = None,
+                                 chat_id: Optional[int] = None, *handler_args, **context_kwargs: dict):
+        """ Performs a state transition operation. """
 
-    def check_target_state_existence(self, pointing_handler: Callable) -> bool:
-        """ Checks the target state for existence. """
+        if target_state not in self.states_map.states:
+            raise RuntimeError(f"unknown target_state: {target_state}")
 
-        target_state = self._states_map.get_target_state(pointing_handler)
-        return target_state is not None
-
-    async def execute_transition(self, pointing_handler: Callable, fsm_context: FSMContext, *args, context_data: dict):
-        """ Executes transition to the next state. """
-
-        target_state = self._states_map.get_target_state(pointing_handler)
+        fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
 
         await fsm_context.set_state(target_state.name)
-        await self._run_transition_process(target_state.process_transition, *args, context_data=context_data)
 
-    @staticmethod
-    async def _run_transition_process(process: Callable, *args, context_data: dict):
-        """ Moves to the next state, given the signature (low-level method). """
+        context_kwargs = _get_transition_args(target_state.process_transition, **context_kwargs)
+        await target_state.process_transition(*handler_args, **context_kwargs)
 
-        process_spec = inspect.getfullargspec(process)
-        partial_data = _get_partial_data(process_spec, context_data)
-        await process(*args, **partial_data)
+    def _register_handlers(self):
+        """ Registers all states map handlers. """
 
-    @property
-    def handlers_is_registered(self):
-
-        return self._handlers_is_registered
+        for state in self.states_map.states:
+            registrar = HandlersRegistrar(self._dispatcher, state=state)
+            state.register_handlers(registrar)
