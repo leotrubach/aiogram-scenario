@@ -24,9 +24,9 @@ class StatesMap:
         self._start_state.name = None
 
     def add_way(self, target_state: AbstractState, pointing_handlers: List[Callable]) -> None:
-        """ Adds a new target target_state and possible ways to it. """
+        """ Adds a new target state and possible ways to it. """
 
-        if not self._check_state_existence(target_state):
+        if target_state not in self.states:
             state_way = StateWay(target_state, pointing_handlers)
             self._states_ways.append(state_way)
         else:
@@ -46,11 +46,3 @@ class StatesMap:
         states = [self._start_state]
         states.extend([state_way.target_state for state_way in self._states_ways])
         return states
-
-    def _check_state_existence(self, state: AbstractState) -> bool:
-        """ Checks target_state for existence. """
-
-        for state_way in self._states_ways:
-            if state == state_way.target_state:
-                return True
-        return False
