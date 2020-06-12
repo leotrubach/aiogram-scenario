@@ -1,7 +1,11 @@
 from typing import Callable, List, Optional
 from dataclasses import dataclass
+import logging
 
 from .state import AbstractState
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass()
@@ -29,6 +33,7 @@ class StatesMap:
         if target_state not in self.states:
             state_way = StateWay(target_state, pointing_handlers)
             self._states_ways.append(state_way)
+            logger.debug(f"Added way '{target_state}': {[i.__qualname__ for i in pointing_handlers]}")
         else:
             raise RuntimeError("StateWay with this target_state has already been added before!")
 
