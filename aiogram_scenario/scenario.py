@@ -1,10 +1,14 @@
 from typing import Optional
 import inspect
+import logging
 
 from aiogram.dispatcher import Dispatcher
 
 from .states_map import StatesMap
 from .state import AbstractState, HandlersRegistrar
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_transition_args(process_obj, **context_kwargs: dict) -> dict:
@@ -30,6 +34,7 @@ class Scenario:
                                  chat_id: Optional[int] = None, *handler_args, **context_kwargs: dict):
         """ Performs a state transition operation. """
 
+        logger.debug(f"User {user_id} transitions to state {target_state!r} in chat {chat_id}...")
         if target_state not in self.states_map.states:
             raise RuntimeError(f"unknown target_state: {target_state}")
 
@@ -43,6 +48,7 @@ class Scenario:
     def register_handlers(self):
         """ Registers all states map handlers. """
 
+        logger.debug("Handlers registration started...")
         for state in self.states_map.states:
             registrar = HandlersRegistrar(self._dispatcher, state=state)
             state.register_handlers(registrar)
