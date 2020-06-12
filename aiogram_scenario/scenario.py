@@ -40,7 +40,7 @@ class Scenario:
 
         fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
 
-        await fsm_context.set_state(target_state.name)
+        await fsm_context.set_state(target_state.raw_value)
 
         context_kwargs = _get_transition_args(target_state.process_transition, **context_kwargs)
         await target_state.process_transition(*handler_args, **context_kwargs)

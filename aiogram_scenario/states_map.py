@@ -21,7 +21,7 @@ class StatesMap:
 
         self._states_ways: List[StateWay] = []
         self._start_state = start_state
-        self._start_state.name = None
+        self._start_state.raw_value = None
 
     def add_way(self, target_state: AbstractState, pointing_handlers: List[Callable]) -> None:
         """ Adds a new target state and possible ways to it. """
