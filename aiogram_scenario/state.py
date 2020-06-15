@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
+from typing import Union
 
 from aiogram import Dispatcher
 
@@ -16,7 +17,7 @@ def _log_registration_handler(state_name, callback, handler_type):
 class HandlersRegistrar:
     """ Handlers registrar, used to register handlers for a specific target_state. """
 
-    def __init__(self, dispatcher: Dispatcher, state_name: str):
+    def __init__(self, dispatcher: Dispatcher, state_name: Union[str, None]):
 
         self._dispatcher = dispatcher
         self._state_name = state_name
