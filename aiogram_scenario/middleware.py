@@ -33,7 +33,7 @@ class ScenarioMiddleware(BaseMiddleware):
 
         logger.debug("Update received, transition process started...")
         pointing_handler = data.get("pointing_handler")
-        logger.debug(f"Got a pointing handler: {pointing_handler}")
+        logger.debug(f"Got a pointing handler: {pointing_handler.__qualname__}")
         if pointing_handler is not None:
             for result in results:
                 if isinstance(result, Exception):
@@ -50,74 +50,46 @@ class ScenarioMiddleware(BaseMiddleware):
                                                             chat.id if chat is not None else None,
                                                             *handler_args, **data)
 
-    async def on_process_message(self, _, data: dict):
+    async def on_process(self, _, data: dict):
 
         self.save_pointing_handler(data)
 
-    async def on_process_edited_message(self, _, data: dict):
+    on_process_message = on_process
 
-        self.save_pointing_handler(data)
+    on_process_edited_message = on_process
 
-    async def on_process_channel_post(self, _, data: dict):
+    on_process_channel_post = on_process
 
-        self.save_pointing_handler(data)
+    on_process_edited_channel_post = on_process
 
-    async def on_process_edited_channel_post(self, _, data: dict):
+    on_process_inline_query = on_process
 
-        self.save_pointing_handler(data)
+    on_process_chosen_inline_result = on_process
 
-    async def on_process_inline_query(self, _, data: dict):
+    on_process_callback_query = on_process
 
-        self.save_pointing_handler(data)
+    on_process_shipping_query = on_process
 
-    async def on_process_chosen_inline_result(self, _, data: dict):
+    on_process_pre_checkout_query = on_process
 
-        self.save_pointing_handler(data)
-
-    async def on_process_callback_query(self, _, data: dict):
-
-        self.save_pointing_handler(data)
-
-    async def on_process_shipping_query(self, _, data: dict):
-
-        self.save_pointing_handler(data)
-
-    async def on_process_pre_checkout_query(self, _, data: dict):
-
-        self.save_pointing_handler(data)
-
-    async def on_post_process_message(self, update, results: list, data: dict):
+    async def on_post_process(self, update, results: list, data: dict):
 
         await self.execute_transition(update, results, data)
 
-    async def on_post_process_edited_message(self, update, results: list, data: dict):
+    on_post_process_message = on_post_process
 
-        await self.execute_transition(update, results, data)
+    on_post_process_edited_message = on_post_process
 
-    async def on_post_process_channel_post(self, update, results: list, data: dict):
+    on_post_process_channel_post = on_post_process
 
-        await self.execute_transition(update, results, data)
+    on_post_process_edited_channel_post = on_post_process
 
-    async def on_post_process_edited_channel_post(self, update, results: list, data: dict):
+    on_post_process_inline_query = on_post_process
 
-        await self.execute_transition(update, results, data)
+    on_post_process_chosen_inline_result = on_post_process
 
-    async def on_post_process_inline_query(self, update, results: list, data: dict):
+    on_post_process_callback_query = on_post_process
 
-        await self.execute_transition(update, results, data)
+    on_post_process_shipping_query = on_post_process
 
-    async def on_post_process_chosen_inline_result(self, update, results: list, data: dict):
-
-        await self.execute_transition(update, results, data)
-
-    async def on_post_process_callback_query(self, update, results: list, data: dict):
-
-        await self.execute_transition(update, results, data)
-
-    async def on_post_process_shipping_query(self, update, results: list, data: dict):
-
-        await self.execute_transition(update, results, data)
-
-    async def on_post_process_pre_checkout_query(self, update, results: list, data: dict):
-
-        await self.execute_transition(update, results, data)
+    on_post_process_pre_checkout_query = on_post_process
