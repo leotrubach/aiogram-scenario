@@ -36,8 +36,8 @@ class StatesMap:
         for target_state, pointing_handlers in routings.items():
             state_routing = StateRouting(target_state, pointing_handlers)
             self._routings.append(state_routing)
-            logger.debug(f"Added routings: {target_state}' - "
-                         f'{" ,".join([i.__qualname__ for i in pointing_handlers])}')
+            logger.debug(f"Added routings: '{target_state}' - "
+                         f'{", ".join([i.__qualname__ for i in pointing_handlers])}')
 
     @property
     def routings(self):
