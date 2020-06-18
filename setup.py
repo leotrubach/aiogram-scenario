@@ -4,7 +4,7 @@ import aiogram_scenario
 
 
 setuptools.setup(
-    name="aiogram_scenario",
+    name="aiogram-scenario",
     version=aiogram_scenario.__version__,
     packages=[
         "aiogram_scenario"
