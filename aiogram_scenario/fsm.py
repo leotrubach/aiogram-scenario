@@ -62,6 +62,7 @@ class StatesStack:
                 self._pop(stack)
 
         await self._update_data(data)
+        logger.debug(f"Pushed onto the stack (user_id={self._user_id}, chat_id={self._chat_id}): {stack}")
 
     async def pop(self) -> str:
 
@@ -70,6 +71,7 @@ class StatesStack:
 
         state = self._pop(stack)
         await self._update_data(data)
+        logger.debug(f"Removed from the stack (user_id={self._user_id}, chat_id={self._chat_id}): {stack}")
 
         return state
 
@@ -113,18 +115,14 @@ class FSM:
 
         serialized_state = self._serialize_state(state)
 
-        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) before next transition: {stack}")
         await stack.push(state=serialized_state)
-        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) after next transition: {stack}")
         await self._execute_transition(state=state, user_id=user_id, chat_id=chat_id)
 
     async def execute_back_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
 
         logger.debug(f"Executing back transition (user_id={user_id}, chat_id={chat_id})...")
         stack = await self._get_states_stack(user_id=user_id, chat_id=chat_id)
-        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) before back transition: {stack}")
         serialized_state = await stack.pop()
-        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) after back transition: {stack}")
 
         state = self._deserialize_state(state=serialized_state)
 
