@@ -6,9 +6,7 @@ import aiogram_scenario
 setuptools.setup(
     name="aiogram-scenario",
     version=aiogram_scenario.__version__,
-    packages=[
-        "aiogram_scenario"
-    ],
+    packages=setuptools.find_packages(),
     url="https://github.com/Abstract-X/aiogram-scenario",
     license="MIT",
     author="Abstract-X",

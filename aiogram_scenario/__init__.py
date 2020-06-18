@@ -1,3 +1,4 @@
+from . import registrars
 from .state import AbstractState
 from .states_map import StatesMap
 from .middleware import FSMMiddleware
