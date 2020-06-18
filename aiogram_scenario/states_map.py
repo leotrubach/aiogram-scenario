@@ -28,6 +28,11 @@ class StatesMap:
 
     def add_routings(self, routings: Dict[AbstractState, List[Callable]]):
 
+        states_names = [i.name for i in routings]
+        for name in states_names:
+            if states_names.count(name) > 1:
+                raise RuntimeError(f"not all states have a unique name: '{name}'")
+
         for target_state, pointing_handlers in routings.items():
             state_routing = StateRouting(target_state, pointing_handlers)
             self._routings.append(state_routing)
