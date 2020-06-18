@@ -1,0 +1,5 @@
+
+
+class TargetStateNotFoundError(Exception):
+
+    pass

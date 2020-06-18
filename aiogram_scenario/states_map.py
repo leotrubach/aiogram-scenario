@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import logging
 
 from .state import AbstractState
+from . import exceptions
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,9 @@ class StatesMap:
         for routing in self.routings:
             if pointing_handler in routing.pointing_handlers:
                 return routing.target_state
+        else:
+            raise exceptions.TargetStateNotFoundError(f"target state not found for handler "
+                                                      f"'{pointing_handler.__qualname__}' ")
 
     def get_state_by_name(self, state_name: str) -> AbstractState:
 
