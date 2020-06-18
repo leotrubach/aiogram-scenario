@@ -24,27 +24,34 @@ class StatesMap:
     def __init__(self, start_state: AbstractState):
 
         self.start_state = start_state
-        self._routes: List[StateRouting] = []
+        self._routings: List[StateRouting] = []
 
-    def add_routes(self, routes: Dict[AbstractState, List[Callable]]):
+    def add_routings(self, routings: Dict[AbstractState, List[Callable]]):
 
-        for target_state, pointing_handlers in routes.items():
+        for target_state, pointing_handlers in routings.items():
             state_routing = StateRouting(target_state, pointing_handlers)
-            self._routes.append(state_routing)
-            logger.debug(f"Added routes: {target_state}' - "
+            self._routings.append(state_routing)
+            logger.debug(f"Added routings: {target_state}' - "
                          f'{" ,".join([i.__qualname__ for i in pointing_handlers])}')
 
     @property
-    def routes(self):
+    def routings(self):
 
-        if not self._routes:
-            raise RuntimeError("No routes set!")
+        if not self._routings:
+            raise RuntimeError("No routings set!")
 
-        return self._routes
+        return self._routings
 
-    def get_target_state(self, pointing_handler: Callable) -> Optional[AbstractState]:
+    def get_state_by_handler(self, pointing_handler: Callable) -> Optional[AbstractState]:
         """ Gets the target target_state using a pointing handler. """
 
-        for routing in self.routes:
+        for routing in self.routings:
             if pointing_handler in routing.pointing_handlers:
                 return routing.target_state
+
+    def get_state_by_name(self, state_name: str) -> AbstractState:
+
+        for routing in self._routings:
+            state = routing.target_state
+            if state.name == state_name:
+                return state
