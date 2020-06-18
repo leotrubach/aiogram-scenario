@@ -1,5 +1,6 @@
 import inspect
 from typing import Optional
+import logging
 
 from aiogram import Dispatcher
 from aiogram.dispatcher.storage import BaseStorage
@@ -8,6 +9,9 @@ from aiogram.types import Update
 
 from .state import AbstractState
 from .states_map import StatesMap
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_transition_args(process_obj, **context_kwargs: dict) -> dict:
@@ -99,18 +103,26 @@ class FSM:
 
     async def execute_next_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
 
+        logger.debug(f"Executing next transition (user_id={user_id}, chat_id={chat_id})...")
         pointing_handler = current_handler.get()
         state = self._states_map.get_state_by_handler(pointing_handler)
         stack = await self._get_states_stack(user_id, chat_id)
+
         serialized_state = self._serialize_state(state)
 
+        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) before next transition: {stack}")
         await stack.push(state=serialized_state)
+        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) after next transition: {stack}")
         await self._execute_transition(state=state, user_id=user_id, chat_id=chat_id)
 
     async def execute_back_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
 
+        logger.debug(f"Executing back transition (user_id={user_id}, chat_id={chat_id})...")
         stack = await self._get_states_stack(user_id=user_id, chat_id=chat_id)
+        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) before back transition: {stack}")
         serialized_state = await stack.pop()
+        logger.debug(f"Stack (user_id={user_id}, chat_id={chat_id}) after back transition: {stack}")
+
         state = self._deserialize_state(state=serialized_state)
 
         await self._execute_transition(state=state, user_id=user_id, chat_id=chat_id)
@@ -136,6 +148,7 @@ class FSM:
 
         await fsm_context.set_state(state.name)
         await state.process_transition(*handler_args, **context_kwargs)
+        logger.debug(f"Transition to '{state}' completed (user_id={user_id}, chat_id={chat_id}).")
 
     async def _get_states_stack(self, user_id: int, chat_id: Optional[int] = None):
 
