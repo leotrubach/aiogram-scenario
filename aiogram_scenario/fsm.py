@@ -46,7 +46,10 @@ class StatesStack:
     async def push(self, state: str) -> None:
 
         data = await self._get_data()
-        stack: list = data["states_stack"]
+        try:
+            stack: list = data["states_stack"]
+        except KeyError:
+            data["states_stack"] = stack = []
 
         try:
             state_index = stack.index(state)
