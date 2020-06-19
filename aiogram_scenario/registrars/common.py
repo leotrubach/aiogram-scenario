@@ -117,4 +117,4 @@ class CommonRegistrar:
     def _register_handler(states: List[AbstractState], reg_partial: Callable):
 
         for state in states:
-            reg_partial(state=state)
+            reg_partial(state=state.name)
