@@ -67,9 +67,10 @@ class StatesStack:
     async def pop(self) -> str:
 
         data = await self._get_data()
-        stack = data["states_stack"]
+        stack: list = data["states_stack"]
 
-        state = self._pop(stack)
+        self._pop(stack)
+        state = stack[-1]
         await self._update_data(data)
         logger.debug(f"Removed from the stack (user_id={self._user_id}, chat_id={self._chat_id}): {stack}")
 
