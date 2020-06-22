@@ -31,7 +31,7 @@ class AbstractState(ABC):
         pass
 
     @abstractmethod
-    def register_handlers(self, registrar: StateRegistrar) -> None:
+    def register_handlers(self, *args, **kwargs) -> None:
         """ Registers target_state handlers. """
 
         pass

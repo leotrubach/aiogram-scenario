@@ -7,6 +7,7 @@ from aiogram import Dispatcher
 from aiogram_scenario.state import AbstractState
 from aiogram_scenario.states_map import StatesMap
 from aiogram_scenario.registrars.state import StateRegistrar
+from aiogram_scenario import utils
 
 
 logger = logging.getLogger(__name__)
@@ -24,16 +25,18 @@ class CommonRegistrar:
 
         self._dispatcher = dispatcher
 
-    def register_map_handlers(self, states_map: StatesMap):
+    def register_map_handlers(self, states_map: StatesMap, **kwargs):
 
         logger.debug("Handlers registration started...")
 
         start_registrar = StateRegistrar(self._dispatcher, state_name=None)
-        states_map.start_state.register_handlers(start_registrar)
+        start_state_kwargs = utils.get_existing_kwargs(states_map.start_state.register_handlers, **kwargs)
+        states_map.start_state.register_handlers(start_registrar, **start_state_kwargs)
 
         for routing in states_map.routings:
             registrar = StateRegistrar(self._dispatcher, state_name=routing.target_state.name)
-            routing.target_state.register_handlers(registrar)
+            state_kwargs = utils.get_existing_kwargs(routing.target_state.register_handlers, **kwargs)
+            routing.target_state.register_handlers(registrar, **state_kwargs)
 
     def register_message_handler(self, callback: Callable, states: List[AbstractState], *custom_filters, commands=None,
                                  regexp=None, content_types=None, run_task=None, **kwargs) -> None:

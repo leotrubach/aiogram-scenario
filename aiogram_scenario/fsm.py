@@ -1,4 +1,3 @@
-import inspect
 from typing import Optional
 import logging
 
@@ -9,18 +8,10 @@ from aiogram.types import Update
 
 from .state import AbstractState
 from .states_map import StatesMap
+from . import utils
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_transition_args(process_obj, **context_kwargs: dict) -> dict:
-
-    spec = inspect.getfullargspec(process_obj)
-    if spec.varkw:
-        return context_kwargs
-
-    return {k: v for k, v in context_kwargs.items() if k in spec.args}
 
 
 def _get_current_update():
@@ -146,7 +137,7 @@ class FSM:
         fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
 
         handler_args = (update,)
-        context_kwargs = _get_transition_args(state.process_transition, **context_data)
+        context_kwargs = utils.get_existing_kwargs(state.process_transition, check_varkw=True, **context_data)
 
         await fsm_context.set_state(state.name)
         await state.process_transition(*handler_args, **context_kwargs)
