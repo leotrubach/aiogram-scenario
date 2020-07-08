@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from .registrars.state import StateRegistrar
-
 
 class AbstractState(ABC):
     """ An abstract target_state class, used to define eigenstates.
