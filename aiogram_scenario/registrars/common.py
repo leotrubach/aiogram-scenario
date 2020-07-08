@@ -27,9 +27,9 @@ class CommonRegistrar:
 
     def register_map_handlers(self, states_map: StatesMap, **kwargs):
 
-        logger.debug("Handlers registration started...")
+        logger.debug("States handlers registration started...")
 
-        start_registrar = StateRegistrar(self._dispatcher, state_name=None)
+        start_registrar = StateRegistrar(self._dispatcher, state_name=states_map.start_state.name, is_start_state=True)
         start_state_kwargs = utils.get_existing_kwargs(states_map.start_state.register_handlers, **kwargs)
         states_map.start_state.register_handlers(start_registrar, **start_state_kwargs)
 
