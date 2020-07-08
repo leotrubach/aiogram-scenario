@@ -50,7 +50,7 @@ class CommonRegistrar:
     def register_callback_query_handler(self, callback: Callable, states: List[AbstractState], *custom_filters,
                                         run_task=None, **kwargs) -> None:
 
-        reg_partial = functools.partial(self._dispatcher.callback_query_handler, callback, *custom_filters,
+        reg_partial = functools.partial(self._dispatcher.register_callback_query_handler, callback, *custom_filters,
                                         run_task=run_task, **kwargs)
         self._register_handler(states, reg_partial)
         _log_registration_handlers(states, callback, "callback_query")
@@ -111,7 +111,7 @@ class CommonRegistrar:
     def register_shipping_query_handler(self, callback: Callable, states: List[AbstractState], *custom_filters,
                                         run_task=None, **kwargs) -> None:
 
-        reg_partial = functools.partial(self._dispatcher.shipping_query_handler, callback, *custom_filters,
+        reg_partial = functools.partial(self._dispatcher.register_shipping_query_handler, callback, *custom_filters,
                                         run_task=run_task, **kwargs)
         self._register_handler(states, reg_partial)
         _log_registration_handlers(states, callback, "shipping_query")
