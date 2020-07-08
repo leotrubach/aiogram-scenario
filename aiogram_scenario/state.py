@@ -19,9 +19,8 @@ class AbstractState(ABC):
 
         return self.name
 
-    @classmethod
     @abstractmethod
-    async def process_transition(cls, *args, **kwargs) -> None:
+    async def process_transition(self, *args, **kwargs) -> None:
         """ Performs target_state transition logic.
             It has all the same arguments as the handler.
         """
