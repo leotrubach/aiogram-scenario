@@ -44,13 +44,10 @@ class StatesStack:
 
         try:
             state_index = stack.index(state)
-        except ValueError:
-            # not on the stack
+        except ValueError:  # not on the stack
             stack.append(state)
-        else:
-            # exists on the stack
-            while len(stack) != state_index + 1:
-                self._pop(stack)
+        else:  # exists on the stack
+            del stack[state_index:]
 
         await self._update_data(data)
         logger.debug(f"Pushed onto the stack (user_id={self._user_id}, chat_id={self._chat_id}): {stack}")
