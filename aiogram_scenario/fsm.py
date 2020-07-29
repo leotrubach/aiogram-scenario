@@ -95,17 +95,21 @@ class FSM:
         self._states_map = states_map
         self._dispatcher = dispatcher
 
-    async def execute_next_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
+    async def execute_next_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None,
+                                      conditions: Optional[dict] = None):
+
+        if conditions is None:
+            conditions = {}
 
         logger.debug(f"Executing next transition (user_id={user_id}, chat_id={chat_id})...")
         pointing_handler = current_handler.get()
-        state = self._states_map.get_state_by_handler(pointing_handler)
+        target_state = self._states_map.get_state_by_handler(pointing_handler, conditions=conditions)
         stack = await self._get_states_stack(user_id, chat_id)
 
-        serialized_state = self._serialize_state(state)
+        serialized_state = self._serialize_state(target_state)
 
         await stack.push(state=serialized_state)
-        await self._execute_transition(state=state, user_id=user_id, chat_id=chat_id)
+        await self._execute_transition(state=target_state, user_id=user_id, chat_id=chat_id)
 
     async def execute_back_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
 
@@ -153,9 +157,9 @@ class FSMPointer:
         self._chat_id = chat_id
         self._user_id = user_id
 
-    async def go_next(self):
+    async def go_next(self, **conditions):
 
-        await self._fsm.execute_next_transition(chat_id=self._chat_id, user_id=self._user_id)
+        await self._fsm.execute_next_transition(chat_id=self._chat_id, user_id=self._user_id, conditions=conditions)
 
     async def go_back(self):
 
