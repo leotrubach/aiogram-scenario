@@ -18,7 +18,7 @@ class PointingHandler:
 
 
 @dataclass()
-class StatesRouting:
+class StateRouting:
     """ Dataclass, which includes the target target_state and the possible ways that lead to it. """
 
     target_state: AbstractState
@@ -33,7 +33,7 @@ class StatesMap:
     def __init__(self, start_state: AbstractState):
 
         self.start_state = start_state
-        self._routings: List[StatesRouting] = []
+        self._routings: List[StateRouting] = []
 
     def add_routings(self, routings: Dict[AbstractState, Iterable[Union[PointingHandler, Callable]]]):
 
@@ -45,13 +45,13 @@ class StatesMap:
         for target_state, pointing_handlers in routings.items():
             pointing_handlers = [i if isinstance(i, PointingHandler) else PointingHandler(i)
                                  for i in pointing_handlers]
-            routing = StatesRouting(target_state, pointing_handlers)
+            routing = StateRouting(target_state, pointing_handlers)
             self._routings.append(routing)
             logger.debug(f"Added routings: '{target_state}' - "
                          f'{", ".join([i.callback.__qualname__ for i in pointing_handlers])}')
 
     @property
-    def routings(self) -> List[StatesRouting]:
+    def routings(self) -> List[StateRouting]:
 
         if not self._routings:
             raise RuntimeError("No routings set!")
