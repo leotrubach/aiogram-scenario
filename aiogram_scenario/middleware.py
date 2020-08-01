@@ -19,6 +19,10 @@ class FSMMiddleware(BaseMiddleware):
 
         self._setup_fsm_pointer(data)
 
+    async def on_process_error(self, _, exception, data):
+
+        self._setup_fsm_pointer(data)
+
     on_process_message = on_process
 
     on_process_edited_message = on_process
