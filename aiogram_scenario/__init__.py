@@ -8,4 +8,4 @@ from .registrars.common import CommonRegistrar
 from .states_group import StatesGroup
 
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
