@@ -8,7 +8,7 @@ from aiogram.types import Update
 
 from .state import AbstractState
 from .states_map import StatesMap
-from . import utils
+from . import utils, exceptions
 
 
 logger = logging.getLogger(__name__)
@@ -64,6 +64,12 @@ class StatesStack:
 
         return state
 
+    async def get_by_index(self, index):
+
+        data = await self._get_data()
+        stack: list = data.get("states_stack")
+        return stack[index]
+
     @staticmethod
     def _pop(stack: list) -> str:
 
@@ -104,22 +110,28 @@ class FSM:
         logger.debug(f"Executing next transition (user_id={user_id}, chat_id={chat_id})...")
         pointing_handler = current_handler.get()
         target_state = self._states_map.get_state_by_handler(pointing_handler, conditions=conditions)
-        stack = await self._get_states_stack(user_id, chat_id)
 
-        serialized_state = self._serialize_state(target_state)
-
-        await stack.push(state=serialized_state)
         await self._execute_transition(state=target_state, user_id=user_id, chat_id=chat_id)
+
+        stack = await self._get_states_stack(user_id, chat_id)
+        serialized_state = self._serialize_state(target_state)
+        await stack.push(state=serialized_state)
+        logger.debug(f"Transition to '{target_state}' completed (user_id={user_id}, chat_id={chat_id})!")
 
     async def execute_back_transition(self, user_id: Optional[int] = None, chat_id: Optional[int] = None):
 
         logger.debug(f"Executing back transition (user_id={user_id}, chat_id={chat_id})...")
         stack = await self._get_states_stack(user_id=user_id, chat_id=chat_id)
-        serialized_state = await stack.pop()
+
+        try:
+            serialized_state = await stack.get_by_index(-2)  # penultimate state
+        except IndexError:
+            raise exceptions.TargetStateNotFoundError("no state for return!")
 
         state = self._deserialize_state(state=serialized_state)
-
         await self._execute_transition(state=state, user_id=user_id, chat_id=chat_id)
+        await stack.pop()
+        logger.debug(f"Transition to '{state}' completed (user_id={user_id}, chat_id={chat_id})!")
 
     @staticmethod
     def _serialize_state(state: AbstractState) -> str:
@@ -140,9 +152,8 @@ class FSM:
         handler_args = (update,)
         context_kwargs = utils.get_existing_kwargs(state.process_transition, check_varkw=True, **context_data)
 
-        await fsm_context.set_state(state.name)
         await state.process_transition(*handler_args, **context_kwargs)
-        logger.debug(f"Transition to '{state}' completed (user_id={user_id}, chat_id={chat_id}).")
+        await fsm_context.set_state(state.name)
 
     async def _get_states_stack(self, user_id: int, chat_id: Optional[int] = None):
 
