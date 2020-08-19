@@ -12,7 +12,7 @@ def fetch_version() -> str:
 
     content = (WORK_DIR / PACKAGE_NAME / "__init__.py").read_text(encoding="UTF-8")
     try:
-        version_string = re.findall(r'__version__ = "\d+\.\d+\.\d+"', content)[0]
+        version_string = re.findall(r'__version__ = \"\d+\.\d+\.\d+\"', content)[0]
         version = version_string.rsplit(" ")[-1].replace('"', "")
         return version
     except IndexError:
