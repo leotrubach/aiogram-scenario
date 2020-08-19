@@ -13,16 +13,17 @@ def fetch_version() -> str:
     content = (WORK_DIR / PACKAGE_NAME / "__init__.py").read_text(encoding="UTF-8")
     try:
         version_string = re.findall(r'__version__ = \"\d+\.\d+\.\d+\"', content)[0]
-        version = version_string.rsplit(" ")[-1].replace('"', "")
-        return version
+        version = version_string.rsplit(" ", 1)[-1].replace('"', '')
     except IndexError:
         raise RuntimeError("version not found!")
+
+    return version
 
 
 setuptools.setup(
     name=LIB_NAME,
     version=fetch_version(),
-    packages=setuptools.find_packages(exclude=("docs",)),
+    packages=[PACKAGE_NAME],
     url="https://github.com/Abstract-X/aiogram-scenario",
     license="MIT",
     author="Abstract-X",
