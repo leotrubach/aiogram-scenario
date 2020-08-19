@@ -1,13 +1,13 @@
 # aiogram-scenario
-FSM implementation for aiogram, which allows you to conveniently set the order of transitions between states.
-  
+FSM implementation for [aiogram](https://github.com/aiogram/aiogram).
+**The library is not yet ready for production!**
+
 ## Installation
-Install/update with [pip](https://pip.pypa.io/en/stable/):
+To install the latest version of aiogram-scenario, use:
 ``` shell
-pip install --upgrade aiogram_scenario 
+pip install --upgrade aiogram-scenario
 ```
-**I recommend using a [virtual environment](https://docs.python.org/3.7/library/venv.html).**
-  
-## Usage example
-You can see an example by going to this repository:  
-https://github.com/Abstract-X/aiogram-scenario-example
+Refer to [Installing Packages](https://packaging.python.org/tutorials/installing-packages/) guide for more information.
+
+## Documentation
+Documentation expected for **1.0.0** release
