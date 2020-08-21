@@ -12,6 +12,8 @@ class AbstractState(ABC):
 
         return self.name
 
+    __repr__ = __str__
+
     def __eq__(self, other):
 
         return self.name == other
