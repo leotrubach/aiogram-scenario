@@ -111,7 +111,6 @@ class FiniteStateMachine:
             await magazine.load()
         except exceptions.MagazineInitializationError:
             await magazine.initialize(str(self.initial_state))
-            await magazine.load()
 
         current_state = self._get_state_by_name(magazine.current_state)
         target_state = self._get_state_by_pointing_handler(pointing_handler)

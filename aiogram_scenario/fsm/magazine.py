@@ -35,7 +35,11 @@ class Magazine:
 
     async def initialize(self, initial_state: str) -> None:
 
-        await self._update_storage([initial_state])
+        states = [initial_state]
+        await self._update_storage(states)
+        self._states = states
+        self._is_loaded = True
+
         logger.debug(f"Initialized magazine storage (user_id={self._user_id}, chat_id={self._chat_id})")
 
     async def load(self) -> None:
