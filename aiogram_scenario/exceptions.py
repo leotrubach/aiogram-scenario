@@ -34,3 +34,8 @@ class MagazineError(Exception):
 class MagazineInitializationError(MagazineError):
 
     pass
+
+
+class MagazineIsNotLoadedError(MagazineError):
+
+    pass

@@ -55,7 +55,7 @@ class Magazine:
     def states(self) -> List[str]:
 
         if not self._is_loaded:
-            raise exceptions.MagazineError("states were not loaded!")
+            raise exceptions.MagazineIsNotLoadedError("states were not loaded!")
 
         return self._states
 
