@@ -1,14 +1,13 @@
 
 
-class InitialStateNotSetError(Exception):
+class StateError(Exception):
 
-    def __init__(self, message=None):
+    pass
 
-        self.message = message or "initial state not set!"
 
-    def __str__(self):
+class InitialStateError(StateError):
 
-        return self.message
+    pass
 
 
 class StateNotFoundError(Exception):

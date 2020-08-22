@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class AbstractState(ABC):
 
-    def __init__(self):
+    def __init__(self, is_initial: bool = False):
 
         self.name = self.__class__.__name__
-        self.raw_value = self.name
+        self.is_initial = is_initial
 
     def __str__(self):
 
@@ -30,3 +31,11 @@ class AbstractState(ABC):
     def register_handlers(self, *args, **reg_kwargs) -> None:
 
         pass
+
+
+def get_state_value(state: AbstractState) -> Optional[str]:
+
+    if state.is_initial:
+        return None
+    else:
+        return str(state)

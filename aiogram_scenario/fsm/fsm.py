@@ -5,7 +5,7 @@ import logging
 from aiogram import Dispatcher
 from aiogram.dispatcher.storage import BaseStorage
 
-from .state import AbstractState
+from .state import AbstractState, get_state_value
 from .magazine import Magazine
 from aiogram_scenario import exceptions, helpers
 
@@ -35,7 +35,7 @@ class FiniteStateMachine:
     def initial_state(self) -> AbstractState:
 
         if self._initial_state is None:
-            raise exceptions.InitialStateNotSetError()
+            raise exceptions.InitialStateError("initial state not set!")
 
         return self._initial_state
 
@@ -44,7 +44,7 @@ class FiniteStateMachine:
 
         try:
             states = [self.initial_state]
-        except exceptions.InitialStateNotSetError:
+        except exceptions.InitialStateError:
             states = []
         states.extend([i.state for i in self._states_routes])
 
@@ -54,20 +54,22 @@ class FiniteStateMachine:
 
         if self._initial_state is not None:
             raise RuntimeError("initial state has already been set before!")
-        if state in self.states:
+        elif not state.is_initial:
+            raise exceptions.InitialStateError(f"state not indicated as initial ({state.is_initial=})!")
+        elif state in self.states:
             raise exceptions.DuplicateError(f"state '{state}' is already exists!")
 
         self._initial_state = state
-        self._initial_state.raw_value = None
 
         logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
 
     def add_state(self, state: AbstractState, pointing_handlers: Collection[Callable]) -> None:
 
-        if state in self.states:
+        if state.is_initial:
+            raise exceptions.StateError(f"state is indicated as initial ({state.is_initial=})!")
+        elif state in self.states:
             raise exceptions.DuplicateError(f"state '{state}' is already exists!")
-
-        if len(set(pointing_handlers)) != len(pointing_handlers):
+        elif len(set(pointing_handlers)) != len(pointing_handlers):
             raise ValueError("there are repetitions in pointing handlers!")
 
         existing_pointing_handlers = self._existing_pointing_handlers
@@ -164,7 +166,8 @@ class FiniteStateMachine:
                          chat_id: Optional[int] = None) -> None:
 
         fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
-        await fsm_context.set_state(state.raw_value)
+        state_value = get_state_value(state)
+        await fsm_context.set_state(state_value)
 
     def _get_state_by_pointing_handler(self, pointing_handler: Callable) -> AbstractState:
 
