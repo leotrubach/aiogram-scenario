@@ -27,7 +27,7 @@ def get_existing_kwargs(callback: Callable,
     if check_varkw and (spec.varkw is not None):
         return kwargs
 
-    return {k: v for k, v in kwargs.items() if k in spec.args}
+    return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
 
 
 def get_current_event():
