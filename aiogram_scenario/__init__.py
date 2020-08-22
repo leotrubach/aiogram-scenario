@@ -4,4 +4,4 @@ from .registrars import MainRegistrar, Registrar
 from . import exceptions
 
 
-__version__ = "0.6.0"
+__version__ = "0.6.2"
