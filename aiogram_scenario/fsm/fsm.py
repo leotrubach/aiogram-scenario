@@ -7,6 +7,7 @@ from aiogram.dispatcher.storage import BaseStorage
 
 from .state import AbstractState, get_state_value
 from .magazine import Magazine
+from .locking import TransitionsLocksStorage
 from aiogram_scenario import exceptions, helpers
 
 
@@ -28,6 +29,7 @@ class FiniteStateMachine:
         self._dispatcher = dispatcher
         self._storage = storage
         self._magazine_key = magazine_key
+        self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
         self._states_routes: List[StateRoute] = []
 
@@ -92,13 +94,17 @@ class FiniteStateMachine:
         logger.debug(f"Started transition from '{current_state}' to '{target_state}' "
                      f"for '{user_id=}' in '{chat_id=}'...")
 
-        exit_kwargs = helpers.get_existing_kwargs(current_state.process_exit, check_varkw=True, **context_kwargs)
-        enter_kwargs = helpers.get_existing_kwargs(target_state.process_enter, check_varkw=True, **context_kwargs)
+        with self._locks_storage.acquire(current_state, target_state, user_id, chat_id):
 
-        await current_state.process_exit(*proc_args, **exit_kwargs)
-        await target_state.process_enter(*proc_args, **enter_kwargs)
+            exit_kwargs = helpers.get_existing_kwargs(current_state.process_exit, check_varkw=True, **context_kwargs)
+            enter_kwargs = helpers.get_existing_kwargs(target_state.process_enter, check_varkw=True, **context_kwargs)
 
-        await self._set_state(target_state, user_id=user_id, chat_id=chat_id)
+            await current_state.process_exit(*proc_args, **exit_kwargs)
+            logger.debug(f"Produced exit from state '{current_state}' for '{user_id=}' in '{chat_id=}'")
+            await target_state.process_enter(*proc_args, **enter_kwargs)
+            logger.debug(f"Produced enter to state '{target_state}' for '{user_id=}' in '{chat_id=}'")
+            await self._set_state(target_state, user_id=user_id, chat_id=chat_id)
+            logger.debug(f"State '{target_state}' is set for '{user_id=}' in '{chat_id=}'")
 
         logger.debug(f"Transition to '{target_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
