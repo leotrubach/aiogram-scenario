@@ -1,4 +1,4 @@
-from typing import Optional, Collection
+from typing import Optional, Collection, List
 
 from .state import AbstractState
 
@@ -6,7 +6,7 @@ from .state import AbstractState
 class StatesGroup:
 
     @classmethod
-    def get_states(cls, exclude: Optional[Collection[AbstractState]] = None):
+    def select(cls, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
 
         cls_values = cls.__dict__.values()
 
