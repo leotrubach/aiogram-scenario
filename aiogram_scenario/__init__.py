@@ -1,5 +1,5 @@
 from .fsm import (FiniteStateMachine, FSMPointer, Magazine, FiniteStateMachineMiddleware,
-                  AbstractState, StatesGroup)
+                  AbstractState, BaseStatesGroup)
 from .registrars import MainRegistrar, Registrar
 from . import exceptions
 

@@ -3,7 +3,7 @@ from typing import Optional, Collection, List
 from .state import AbstractState
 
 
-class StatesGroup:
+class BaseStatesGroup:
 
     @classmethod
     def select(cls, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
