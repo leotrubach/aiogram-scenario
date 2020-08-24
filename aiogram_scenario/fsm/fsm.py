@@ -84,6 +84,13 @@ class FiniteStateMachine:
 
         logger.debug(f"Added state to FSM: '{state}'")
 
+    def remove_state(self, state: AbstractState) -> None:
+
+        for route in self._states_routes:
+            if route.state == state:
+                self._states_routes.remove(route)
+                break
+
     async def execute_transition(self, current_state: AbstractState,
                                  target_state: AbstractState,
                                  proc_args: tuple,
