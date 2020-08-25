@@ -8,6 +8,11 @@ class StateError(Exception):
     pass
 
 
+class StateNotFoundError(StateError):
+
+    pass
+
+
 class StateNotAssignedError(StateError):
 
     pass
@@ -24,11 +29,6 @@ class InitialStateError(StateError):
 
 
 class SettingInitialStateError(InitialStateError):
-
-    pass
-
-
-class StateNotFoundError(Exception):
 
     pass
 
