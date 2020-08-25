@@ -19,6 +19,10 @@ class AbstractState(ABC):
 
         return self.name == other
 
+    def __hash__(self):
+
+        return hash(self.name)
+
     async def process_enter(self, *args, **kwargs) -> None:
 
         pass

@@ -1,5 +1,4 @@
-from typing import Optional, List, Callable, Collection
-from dataclasses import dataclass
+from typing import Optional, List, Callable, Collection, Dict
 import logging
 
 from aiogram import Dispatcher
@@ -14,13 +13,6 @@ from aiogram_scenario import exceptions, helpers
 logger = logging.getLogger(__name__)
 
 
-@dataclass()
-class StateRoute:
-
-    state: AbstractState
-    pointing_handlers: Collection[Callable]
-
-
 class FiniteStateMachine:
 
     def __init__(self, dispatcher: Dispatcher, storage: BaseStorage,
@@ -31,7 +23,7 @@ class FiniteStateMachine:
         self._magazine_key = magazine_key
         self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
-        self._states_routes: List[StateRoute] = []
+        self._states_routes: Dict[AbstractState, Collection[Callable]] = {}
 
     @property
     def initial_state(self) -> AbstractState:
@@ -48,7 +40,7 @@ class FiniteStateMachine:
             states = [self.initial_state]
         except exceptions.InitialStateError:
             states = []
-        states.extend([i.state for i in self._states_routes])
+        states.extend(self._states_routes.keys())
 
         return states
 
@@ -79,17 +71,16 @@ class FiniteStateMachine:
             if i in existing_pointing_handlers:
                 raise exceptions.DuplicateError(f"handler '{i.__qualname__}' has already been added earlier!")
 
-        state_route = StateRoute(state, pointing_handlers)
-        self._states_routes.append(state_route)
+        self._states_routes[state] = tuple(pointing_handlers)
 
         logger.debug(f"Added state to FSM: '{state}'")
 
     def remove_state(self, state: AbstractState) -> None:
 
-        for route in self._states_routes:
-            if route.state == state:
-                self._states_routes.remove(route)
-                break
+        try:
+            del self._states_routes[state]
+        except KeyError:
+            raise exceptions.StateNotFoundError("no state found to remove!")
 
     async def execute_transition(self, current_state: AbstractState,
                                  target_state: AbstractState,
@@ -189,9 +180,9 @@ class FiniteStateMachine:
 
     def _get_state_by_pointing_handler(self, pointing_handler: Callable) -> AbstractState:
 
-        for route in self._states_routes:
-            if pointing_handler in route.pointing_handlers:
-                return route.state
+        for state, pointing_handlers in self._states_routes.items():
+            if pointing_handler in pointing_handlers:
+                return state
 
         raise exceptions.StateNotFoundError(f"no target state found for '{pointing_handler.__qualname__}' handler!")
 
@@ -207,7 +198,7 @@ class FiniteStateMachine:
     def _existing_pointing_handlers(self) -> List[Callable]:
 
         handlers = []
-        for i in self._states_routes:
-            handlers.extend(i.pointing_handlers)
+        for pointing_handlers in self._states_routes.values():
+            handlers.extend(pointing_handlers)
 
         return handlers
