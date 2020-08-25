@@ -93,13 +93,17 @@ class FiniteStateMachine:
 
     async def execute_transition(self, current_state: AbstractState,
                                  target_state: AbstractState,
-                                 proc_args: tuple,
+                                 proc_args: Collection,
                                  context_kwargs: dict,
+                                 magazine: Magazine,
                                  user_id: Optional[int] = None,
                                  chat_id: Optional[int] = None) -> None:
 
         logger.debug(f"Started transition from '{current_state}' to '{target_state}' "
                      f"for '{user_id=}' in '{chat_id=}'...")
+
+        if not magazine.is_loaded:
+            raise exceptions.TransitionError("magazine is not loaded!")
 
         with self._locks_storage.acquire(current_state, target_state, user_id, chat_id):
 
@@ -110,8 +114,11 @@ class FiniteStateMachine:
             logger.debug(f"Produced exit from state '{current_state}' for '{user_id=}' in '{chat_id=}'")
             await target_state.process_enter(*proc_args, **enter_kwargs)
             logger.debug(f"Produced enter to state '{target_state}' for '{user_id=}' in '{chat_id=}'")
+
             await self._set_state(target_state, user_id=user_id, chat_id=chat_id)
-            logger.debug(f"State '{target_state}' is set for '{user_id=}' in '{chat_id=}'")
+
+            magazine.set(str(target_state))
+            await magazine.commit()
 
         logger.debug(f"Transition to '{target_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
@@ -121,7 +128,7 @@ class FiniteStateMachine:
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = await self.get_magazine(user_id, chat_id)
+        magazine = self.get_magazine(user_id, chat_id)
         try:
             await magazine.load()
         except exceptions.MagazineInitializationError:
@@ -135,19 +142,17 @@ class FiniteStateMachine:
             target_state=target_state,
             proc_args=(event,),
             context_kwargs=context_kwargs,
+            magazine=magazine,
             user_id=user_id,
             chat_id=chat_id
         )
-
-        magazine.set(str(target_state))
-        await magazine.commit()
 
     async def execute_back_transition(self, event,
                                       context_kwargs: dict,
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = await self.get_magazine(user_id, chat_id)
+        magazine = self.get_magazine(user_id, chat_id)
         await magazine.load()
 
         penultimate_state = magazine.penultimate_state
@@ -162,14 +167,12 @@ class FiniteStateMachine:
             target_state=target_state,
             proc_args=(event,),
             context_kwargs=context_kwargs,
+            magazine=magazine,
             user_id=user_id,
             chat_id=chat_id
         )
 
-        magazine.pop()
-        await magazine.commit()
-
-    async def get_magazine(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
+    def get_magazine(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
 
         return Magazine(storage=self._storage, data_key=self._magazine_key,
                         user_id=user_id, chat_id=chat_id)
@@ -181,6 +184,8 @@ class FiniteStateMachine:
         fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
         state_value = get_state_value(state)
         await fsm_context.set_state(state_value)
+
+        logger.debug(f"State '{state}' is set for '{user_id=}' in '{chat_id=}'")
 
     def _get_state_by_pointing_handler(self, pointing_handler: Callable) -> AbstractState:
 

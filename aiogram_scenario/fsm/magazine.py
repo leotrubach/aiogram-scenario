@@ -33,6 +33,11 @@ class Magazine:
 
     __repr__ = __str__
 
+    @property
+    def is_loaded(self):
+
+        return self._is_loaded
+
     async def initialize(self, initial_state: str) -> None:
 
         states = [initial_state]
@@ -101,7 +106,7 @@ class Magazine:
     async def commit(self) -> None:
 
         await self._update_storage(self._states)
-        logger.debug(f"Magazine has committed states to storage (user_id={self._user_id}, chat_id={self._chat_id})")
+        logger.debug(f"Magazine has committed states {self._states} to storage (user_id={self._user_id}, chat_id={self._chat_id})")
 
     async def _update_storage(self, states: List[str]) -> None:
 
