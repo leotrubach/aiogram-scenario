@@ -8,7 +8,7 @@ class BaseStatesGroup:
     @classmethod
     def select(cls, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
 
-        cls_values = cls.__dict__.values()
+        cls_values = vars(cls).values()
 
         if exclude is None:
             states = [i for i in cls_values if isinstance(i, AbstractState)]
