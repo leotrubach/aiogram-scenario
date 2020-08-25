@@ -8,7 +8,22 @@ class StateError(Exception):
     pass
 
 
+class StateNotAssignedError(StateError):
+
+    pass
+
+
+class AddingStateError(StateError):
+
+    pass
+
+
 class InitialStateError(StateError):
+
+    pass
+
+
+class SettingInitialStateError(InitialStateError):
 
     pass
 

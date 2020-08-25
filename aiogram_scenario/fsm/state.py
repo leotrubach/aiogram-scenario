@@ -4,10 +4,12 @@ from typing import Optional
 
 class AbstractState(ABC):
 
-    def __init__(self, is_initial: bool = False):
+    def __init__(self):
 
         self.name = self.__class__.__name__
-        self.is_initial = is_initial
+        self._is_assigned = False
+        self.is_initial = False
+        self.handlers = []
 
     def __str__(self):
 
@@ -31,15 +33,27 @@ class AbstractState(ABC):
 
         pass
 
+    @property
+    def raw_value(self):
+
+        if self.is_initial:
+            return None
+        else:
+            return str(self)
+
+    @property
+    def is_assigned(self) -> bool:
+
+        return self._is_assigned
+
+    @is_assigned.setter
+    def is_assigned(self, value: bool) -> None:
+
+        if value is False:
+            self.is_initial = False
+        self._is_assigned = value
+
     @abstractmethod
     def register_handlers(self, *args, **reg_kwargs) -> None:
 
         pass
-
-
-def get_state_value(state: AbstractState) -> Optional[str]:
-
-    if state.is_initial:
-        return None
-    else:
-        return str(state)

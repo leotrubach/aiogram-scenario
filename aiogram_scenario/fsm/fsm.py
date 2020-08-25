@@ -4,7 +4,7 @@ import logging
 from aiogram import Dispatcher
 from aiogram.dispatcher.storage import BaseStorage
 
-from .state import AbstractState, get_state_value
+from .state import AbstractState
 from .magazine import Magazine
 from .locking import TransitionsLocksStorage
 from aiogram_scenario import exceptions, helpers
@@ -47,31 +47,34 @@ class FiniteStateMachine:
     def set_initial_state(self, state: AbstractState) -> None:
 
         if self._initial_state is not None:
-            raise RuntimeError("initial state has already been set before!")
-        elif not state.is_initial:
-            raise exceptions.InitialStateError(f"state not indicated as initial ({state.is_initial=})!")
+            raise exceptions.SettingInitialStateError("initial state has already been set before!")
+        elif state.is_assigned:
+            raise exceptions.SettingInitialStateError(f"state '{state}' has already been assigned!")
         elif state in self.states:
             raise exceptions.DuplicateError(f"state '{state}' is already exists!")
 
+        state.is_assigned = True
+        state.is_initial = True
         self._initial_state = state
 
         logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
 
     def add_state(self, state: AbstractState, pointing_handlers: Collection[Callable]) -> None:
 
-        if state.is_initial:
-            raise exceptions.StateError(f"state is indicated as initial ({state.is_initial=})!")
+        if state.is_assigned:
+            raise exceptions.AddingStateError(f"state '{state}' has already been assigned!")
         elif state in self.states:
             raise exceptions.DuplicateError(f"state '{state}' is already exists!")
         elif len(set(pointing_handlers)) != len(pointing_handlers):
-            raise ValueError("there are repetitions in pointing handlers!")
+            raise exceptions.DuplicateError("there are repetitions in pointing handlers!")
 
         existing_pointing_handlers = self._existing_pointing_handlers
         for i in pointing_handlers:
             if i in existing_pointing_handlers:
                 raise exceptions.DuplicateError(f"handler '{i.__qualname__}' has already been added earlier!")
 
-        self._states_routes[state] = tuple(pointing_handlers)
+        state.is_assigned = True
+        self._states_routes[state] = set(pointing_handlers)
 
         logger.debug(f"Added state to FSM: '{state}'")
 
@@ -81,6 +84,8 @@ class FiniteStateMachine:
             del self._states_routes[state]
         except KeyError:
             raise exceptions.StateNotFoundError("no state found to remove!")
+        else:
+            state.is_assigned = False
 
     async def execute_transition(self, current_state: AbstractState,
                                  target_state: AbstractState,
@@ -173,8 +178,7 @@ class FiniteStateMachine:
                          chat_id: Optional[int] = None) -> None:
 
         fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
-        state_value = get_state_value(state)
-        await fsm_context.set_state(state_value)
+        await fsm_context.set_state(state.raw_value)
 
         logger.debug(f"State '{state}' is set for '{user_id=}' in '{chat_id=}'")
 
