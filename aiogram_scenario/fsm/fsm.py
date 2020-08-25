@@ -173,6 +173,18 @@ class FiniteStateMachine:
         return Magazine(storage=self._storage, data_key=self._magazine_key,
                         user_id=user_id, chat_id=chat_id)
 
+    async def set_transitions_chronology(self, states: List[AbstractState],
+                                         user_id: Optional[int] = None,
+                                         chat_id: Optional[int] = None) -> None:
+
+        # TODO: Add ability to check correctness of the chronology
+        magazine = self.get_magazine(user_id, chat_id)
+        await magazine.initialize(str(self.initial_state))
+
+        for state in states:
+            magazine.set(str(state))
+        await magazine.commit()
+
     async def _set_state(self, state: AbstractState,
                          user_id: Optional[int] = None,
                          chat_id: Optional[int] = None) -> None:
