@@ -4,7 +4,7 @@ import functools
 
 from aiogram import Dispatcher
 
-from . import helpers, exceptions
+from . import helpers
 from aiogram_scenario.fsm.state import AbstractState
 
 
@@ -34,14 +34,12 @@ class Registrar:
         self._dispatcher.register_message_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                   content_types=content_types, state=self._state.raw_value,
                                                   run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "message", self._state)
 
     def register_callback_query_handler(self, callback: Callable, *custom_filters, run_task=None, **kwargs) -> None:
 
         self._dispatcher.register_callback_query_handler(callback, *custom_filters, state=self._state.raw_value,
                                                          run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "callback_query", self._state)
 
     def register_channel_post_handler(self, callback: Callable, *custom_filters, commands=None, regexp=None,
@@ -50,14 +48,12 @@ class Registrar:
         self._dispatcher.register_channel_post_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                        content_types=content_types, state=self._state.raw_value,
                                                        run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "channel_post", self._state)
 
     def register_chosen_inline_handler(self, callback: Callable, *custom_filters, run_task=None, **kwargs) -> None:
 
         self._dispatcher.register_chosen_inline_handler(callback, *custom_filters, state=self._state.raw_value,
                                                         run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "chosen_inline", self._state)
 
     def register_edited_channel_post_handler(self, callback: Callable, *custom_filters, commands=None, regexp=None,
@@ -66,7 +62,6 @@ class Registrar:
         self._dispatcher.register_edited_channel_post_handler(callback, *custom_filters, commands=commands,
                                                               regexp=regexp, content_types=content_types,
                                                               state=self._state.raw_value, run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "edited_channel_post", self._state)
 
     def register_edited_message_handler(self, callback: Callable, *custom_filters, commands=None, regexp=None,
@@ -75,28 +70,24 @@ class Registrar:
         self._dispatcher.register_edited_message_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                          content_types=content_types, state=self._state.raw_value,
                                                          run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "edited_message", self._state)
 
     def register_inline_handler(self, callback: Callable, *custom_filters, run_task=None, **kwargs) -> None:
 
         self._dispatcher.register_inline_handler(callback, *custom_filters, state=self._state.raw_value,
                                                  run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "inline", self._state)
 
     def register_pre_checkout_query_handler(self, callback: Callable, *custom_filters, run_task=None, **kwargs) -> None:
 
         self._dispatcher.register_pre_checkout_query_handler(callback, *custom_filters, state=self._state.raw_value,
                                                              run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "pre_checkout_query", self._state)
 
     def register_shipping_query_handler(self, callback: Callable, *custom_filters, run_task=None, **kwargs) -> None:
 
         self._dispatcher.register_shipping_query_handler(callback, *custom_filters, state=self._state.raw_value,
                                                          run_task=run_task, **kwargs)
-        self._state.handlers.append(callback)
         _log_registration_handler_on_state(callback, "shipping_query", self._state)
 
 
@@ -109,9 +100,6 @@ class MainRegistrar:
     def register_fsm_handlers(self, states: Collection[AbstractState], **reg_kwargs) -> None:
 
         for state in states:
-            if not state.is_assigned:
-                raise exceptions.StateNotAssignedError(f"state '{state}' not assigned!")
-
             registrar = Registrar(self._dispatcher, state=state)
             state_reg_kwargs = helpers.get_existing_kwargs(state.register_handlers, **reg_kwargs)
             state.register_handlers(registrar, **state_reg_kwargs)
@@ -205,12 +193,8 @@ class MainRegistrar:
     @staticmethod
     def _register_handler_on_states(states: List[AbstractState], reg_partial: functools.partial) -> None:
 
-        callback = reg_partial.args[0]
         for state in states:
-            if not state.is_assigned:
-                raise exceptions.StateNotAssignedError(f"state '{state}' not assigned!")
             reg_partial(state=state.raw_value)
-            state.handlers.append(callback)
 
         handler_type = reg_partial.func.__name__.replace("register_", "", 1).replace("_handler", "", 1)
         callback_name = reg_partial.keywords["callback"].__qualname__
