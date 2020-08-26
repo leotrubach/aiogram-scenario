@@ -49,8 +49,8 @@ class FiniteStateMachine:
 
         logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
 
-    def add_transition(self, signal_handler: Callable,
-                       source_state: AbstractState,
+    def add_transition(self, source_state: AbstractState,
+                       signal_handler: Callable,
                        destination_state: AbstractState) -> None:
 
         if self._transitions.get(source_state) is None:
@@ -68,12 +68,12 @@ class FiniteStateMachine:
 
         self._transitions[source_state][signal_handler] = destination_state
 
-    def add_transitions(self, signal_handler: Callable,
-                        source_states: Collection[AbstractState],
+    def add_transitions(self, source_states: Collection[AbstractState],
+                        signal_handler: Callable,
                         destination_state: AbstractState) -> None:
 
         for source_state in source_states:
-            self.add_transition(signal_handler, source_state, destination_state)
+            self.add_transition(source_state, signal_handler, destination_state)
 
     async def execute_transition(self, source_state: AbstractState,
                                  destination_state: AbstractState,
