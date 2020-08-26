@@ -83,13 +83,12 @@ class FiniteStateMachine:
                                  user_id: Optional[int] = None,
                                  chat_id: Optional[int] = None) -> None:
 
-        logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
-                     f"for '{user_id=}' in '{chat_id=}'...")
-
         if not magazine.is_loaded:
             raise exceptions.TransitionError("magazine is not loaded!")
 
         with self._locks_storage.acquire(source_state, destination_state, user_id, chat_id):
+            logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
+                         f"for '{user_id=}' in '{chat_id=}'...")
 
             exit_kwargs, enter_kwargs = [helpers.get_existing_kwargs(method, check_varkw=True, **context_kwargs)
                                          for method in (source_state.process_exit, destination_state.process_enter)]

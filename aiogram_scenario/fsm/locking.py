@@ -72,8 +72,6 @@ class TransitionsLocksStorage:
             user_id: Optional[int] = None,
             chat_id: Optional[int] = None) -> TransitionLock:
 
-        logger.debug(f"Started locking for ({user_id=}, {chat_id=})...")
-
         is_locked = self._check_locking(user_id, chat_id)
         if is_locked:
             raise exceptions.TransitionLockingError(
@@ -97,8 +95,6 @@ class TransitionsLocksStorage:
         return lock
 
     def remove(self, lock: TransitionLock) -> None:
-
-        logger.debug(f"Started unlocking for (user_id={lock.user_id}, chat_id={lock.chat_id})...")
 
         if not lock.is_active:
             raise RuntimeError(f"transition lock ({lock}) was removed earlier!")
