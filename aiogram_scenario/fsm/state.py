@@ -1,15 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class AbstractState(ABC):
 
-    def __init__(self):
+    def __init__(self, is_initial: bool = False):
 
         self.name = self.__class__.__name__
-        self._is_assigned = False
-        self.is_initial = False
-        self.handlers = []
+        self._is_initial = is_initial
 
     def __str__(self):
 
@@ -34,24 +31,17 @@ class AbstractState(ABC):
         pass
 
     @property
+    def is_initial(self):
+
+        return self._is_initial
+
+    @property
     def raw_value(self):
 
-        if self.is_initial:
+        if self._is_initial:
             return None
         else:
             return str(self)
-
-    @property
-    def is_assigned(self) -> bool:
-
-        return self._is_assigned
-
-    @is_assigned.setter
-    def is_assigned(self, value: bool) -> None:
-
-        if value is False:
-            self.is_initial = False
-        self._is_assigned = value
 
     @abstractmethod
     def register_handlers(self, *args, **reg_kwargs) -> None:

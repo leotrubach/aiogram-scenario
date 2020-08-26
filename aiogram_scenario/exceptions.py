@@ -13,16 +13,6 @@ class StateNotFoundError(StateError):
     pass
 
 
-class StateNotAssignedError(StateError):
-
-    pass
-
-
-class AddingStateError(StateError):
-
-    pass
-
-
 class InitialStateError(StateError):
 
     pass
@@ -39,6 +29,11 @@ class DuplicateError(Exception):
 
 
 class TransitionError(Exception):
+
+    pass
+
+
+class AddingTransitionError(TransitionError):
 
     pass
 

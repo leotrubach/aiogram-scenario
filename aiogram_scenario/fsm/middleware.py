@@ -51,7 +51,7 @@ class FiniteStateMachineMiddleware(BaseMiddleware):
 
         data[self._fsm_pointer_arg] = FSMPointer(
             fsm=self._fsm,
-            pointing_handler=current_handler.get(),
+            signal_handler=current_handler.get(),
             event=helpers.get_current_event(),
             context_kwargs=ctx_data.get(),
             user_id=user_id,

@@ -21,7 +21,8 @@ class FiniteStateMachine:
         self._storage = storage
         self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
-        self._states_routes: Dict[AbstractState, Collection[Callable]] = {}
+        self._transitions: Dict[AbstractState, Dict[Callable, AbstractState]] = {}
+        self._states_mapping: Dict[str, AbstractState] = {}
 
     @property
     def initial_state(self) -> AbstractState:
@@ -32,91 +33,80 @@ class FiniteStateMachine:
         return self._initial_state
 
     @property
-    def states(self) -> List[AbstractState]:
+    def source_states(self) -> List[AbstractState]:
 
-        try:
-            states = [self.initial_state]
-        except exceptions.InitialStateError:
-            states = []
-        states.extend(self._states_routes.keys())
-
-        return states
+        return list(self._transitions.keys())
 
     def set_initial_state(self, state: AbstractState) -> None:
 
         if self._initial_state is not None:
             raise exceptions.SettingInitialStateError("initial state has already been set before!")
-        elif state.is_assigned:
-            raise exceptions.SettingInitialStateError(f"state '{state}' has already been assigned!")
-        elif state in self.states:
-            raise exceptions.DuplicateError(f"state '{state}' is already exists!")
+        elif not state.is_initial:
+            raise exceptions.SettingInitialStateError(f"state '{state}' not indicated "
+                                                      f"as initial ({state.is_initial=})!")
 
-        state.is_assigned = True
-        state.is_initial = True
         self._initial_state = state
 
         logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
 
-    def add_state(self, state: AbstractState, pointing_handlers: Collection[Callable]) -> None:
+    def add_transition(self, signal_handler: Callable,
+                       source_state: AbstractState,
+                       destination_state: AbstractState) -> None:
 
-        if state.is_assigned:
-            raise exceptions.AddingStateError(f"state '{state}' has already been assigned!")
-        elif state in self.states:
-            raise exceptions.DuplicateError(f"state '{state}' is already exists!")
-        elif len(set(pointing_handlers)) != len(pointing_handlers):
-            raise exceptions.DuplicateError("there are repetitions in pointing handlers!")
+        if self._transitions.get(source_state) is None:
 
-        existing_pointing_handlers = self._existing_pointing_handlers
-        for i in pointing_handlers:
-            if i in existing_pointing_handlers:
-                raise exceptions.DuplicateError(f"handler '{i.__qualname__}' has already been added earlier!")
+            if source_state.is_initial:
+                if any(i.is_initial for i in self.source_states):
+                    raise exceptions.AddingTransitionError("initial state has already been added earlier! "
+                                                           f"Source state '{source_state}' is indicated as initial!")
+            self._transitions[source_state] = {}
+            self._states_mapping[str(source_state)] = source_state
+        elif self._transitions[source_state].get(signal_handler) is None:
+            raise exceptions.AddingTransitionError("transition for the signal handler "
+                                                   f"'{signal_handler.__qualname__}' is already defined "
+                                                   f"in '{source_state}' state!")
 
-        state.is_assigned = True
-        self._states_routes[state] = set(pointing_handlers)
+        self._transitions[source_state][signal_handler] = destination_state
 
-        logger.debug(f"Added state to FSM: '{state}'")
+    def add_transitions(self, signal_handler: Callable,
+                        source_states: Collection[AbstractState],
+                        destination_state: AbstractState) -> None:
 
-    def remove_state(self, state: AbstractState) -> None:
+        for source_state in source_states:
+            self.add_transition(signal_handler, source_state, destination_state)
 
-        try:
-            del self._states_routes[state]
-        except KeyError:
-            raise exceptions.StateNotFoundError("no state found to remove!")
-        else:
-            state.is_assigned = False
-
-    async def execute_transition(self, current_state: AbstractState,
-                                 target_state: AbstractState,
-                                 proc_args: Collection,
+    async def execute_transition(self, source_state: AbstractState,
+                                 destination_state: AbstractState,
+                                 event,
                                  context_kwargs: dict,
                                  magazine: Magazine,
                                  user_id: Optional[int] = None,
                                  chat_id: Optional[int] = None) -> None:
 
-        logger.debug(f"Started transition from '{current_state}' to '{target_state}' "
+        logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
                      f"for '{user_id=}' in '{chat_id=}'...")
 
         if not magazine.is_loaded:
             raise exceptions.TransitionError("magazine is not loaded!")
 
-        with self._locks_storage.acquire(current_state, target_state, user_id, chat_id):
+        with self._locks_storage.acquire(source_state, destination_state, user_id, chat_id):
 
-            exit_kwargs = helpers.get_existing_kwargs(current_state.process_exit, check_varkw=True, **context_kwargs)
-            enter_kwargs = helpers.get_existing_kwargs(target_state.process_enter, check_varkw=True, **context_kwargs)
+            exit_kwargs, enter_kwargs = [helpers.get_existing_kwargs(method, check_varkw=True, **context_kwargs)
+                                         for method in (source_state.process_exit, destination_state.process_enter)]
 
-            await current_state.process_exit(*proc_args, **exit_kwargs)
-            logger.debug(f"Produced exit from state '{current_state}' for '{user_id=}' in '{chat_id=}'")
-            await target_state.process_enter(*proc_args, **enter_kwargs)
-            logger.debug(f"Produced enter to state '{target_state}' for '{user_id=}' in '{chat_id=}'")
+            await source_state.process_exit(event, **exit_kwargs)
+            logger.debug(f"Produced exit from state '{source_state}' for '{user_id=}' in '{chat_id=}'")
+            await destination_state.process_enter(event, **enter_kwargs)
+            logger.debug(f"Produced enter to state '{destination_state}' for '{user_id=}' in '{chat_id=}'")
 
-            await self._set_state(target_state, user_id=user_id, chat_id=chat_id)
+            await self._set_state(destination_state, user_id=user_id, chat_id=chat_id)
 
-            magazine.set(str(target_state))
+            magazine.set(str(destination_state))
             await magazine.commit()
 
-        logger.debug(f"Transition to '{target_state}' for '{user_id=}' in '{chat_id=}' completed!")
+        logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
-    async def execute_next_transition(self, pointing_handler: Callable,
+    async def execute_next_transition(self, signal_handler: Callable,
                                       event,
                                       context_kwargs: dict,
                                       user_id: Optional[int] = None,
@@ -128,13 +118,13 @@ class FiniteStateMachine:
         except exceptions.MagazineInitializationError:
             await magazine.initialize(str(self.initial_state))
 
-        current_state = self._get_state_by_name(magazine.current_state)
-        target_state = self._get_state_by_pointing_handler(pointing_handler)
+        source_state = self._states_mapping[magazine.current_state]
+        destination_state = self._transitions[source_state][signal_handler]
 
         await self.execute_transition(
-            current_state=current_state,
-            target_state=target_state,
-            proc_args=(event,),
+            source_state=source_state,
+            destination_state=destination_state,
+            event=event,
             context_kwargs=context_kwargs,
             magazine=magazine,
             user_id=user_id,
@@ -153,13 +143,13 @@ class FiniteStateMachine:
         if penultimate_state is None:
             raise exceptions.TransitionError("there are not enough states in the magazine to return!")
 
-        current_state = self._get_state_by_name(magazine.current_state)
-        target_state = self._get_state_by_name(penultimate_state)
+        source_state = self._states_mapping[magazine.current_state]
+        destination_state = self._states_mapping[penultimate_state]
 
         await self.execute_transition(
-            current_state=current_state,
-            target_state=target_state,
-            proc_args=(event,),
+            source_state=source_state,
+            destination_state=destination_state,
+            event=event,
             context_kwargs=context_kwargs,
             magazine=magazine,
             user_id=user_id,
@@ -170,17 +160,17 @@ class FiniteStateMachine:
 
         return Magazine(storage=self._storage, user_id=user_id, chat_id=chat_id)
 
-    async def set_transitions_chronology(self, states: List[AbstractState],
-                                         user_id: Optional[int] = None,
-                                         chat_id: Optional[int] = None) -> None:
-
-        # TODO: Add ability to check correctness of the chronology
-        magazine = self.get_magazine(user_id, chat_id)
-        await magazine.initialize(str(self.initial_state))
-
-        for state in states:
-            magazine.set(str(state))
-        await magazine.commit()
+    # async def set_transitions_chronology(self, states: List[AbstractState],
+    #                                      user_id: Optional[int] = None,
+    #                                      chat_id: Optional[int] = None) -> None:
+    #
+    #     # TODO: Add ability to check correctness of the chronology
+    #     magazine = self.get_magazine(user_id, chat_id)
+    #     await magazine.initialize(str(self.initial_state))
+    #
+    #     for state in states:
+    #         magazine.set(str(state))
+    #     await magazine.commit()
 
     async def _set_state(self, state: AbstractState,
                          user_id: Optional[int] = None,
@@ -190,28 +180,3 @@ class FiniteStateMachine:
         await fsm_context.set_state(state.raw_value)
 
         logger.debug(f"State '{state}' is set for '{user_id=}' in '{chat_id=}'")
-
-    def _get_state_by_pointing_handler(self, pointing_handler: Callable) -> AbstractState:
-
-        for state, pointing_handlers in self._states_routes.items():
-            if pointing_handler in pointing_handlers:
-                return state
-
-        raise exceptions.StateNotFoundError(f"no target state found for '{pointing_handler.__qualname__}' handler!")
-
-    def _get_state_by_name(self, name: str) -> AbstractState:
-
-        for state in self.states:
-            if name == state.name:
-                return state
-
-        raise exceptions.StateNotFoundError(f"no state found for '{name}' name!")
-
-    @property
-    def _existing_pointing_handlers(self) -> List[Callable]:
-
-        handlers = []
-        for pointing_handlers in self._states_routes.values():
-            handlers.extend(pointing_handlers)
-
-        return handlers
