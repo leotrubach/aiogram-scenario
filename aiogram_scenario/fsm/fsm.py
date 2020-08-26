@@ -2,12 +2,12 @@ from typing import Optional, List, Callable, Collection, Dict
 import logging
 
 from aiogram import Dispatcher
-from aiogram.dispatcher.storage import BaseStorage
 
 from .state import AbstractState
 from .magazine import Magazine
 from .locking import TransitionsLocksStorage
 from aiogram_scenario import exceptions, helpers
+from aiogram_scenario.fsm.storages import BaseStorage
 
 
 logger = logging.getLogger(__name__)
@@ -15,12 +15,10 @@ logger = logging.getLogger(__name__)
 
 class FiniteStateMachine:
 
-    def __init__(self, dispatcher: Dispatcher, storage: BaseStorage,
-                 magazine_key: str = "fsm_states_magazine"):
+    def __init__(self, dispatcher: Dispatcher, storage: BaseStorage):
 
         self._dispatcher = dispatcher
         self._storage = storage
-        self._magazine_key = magazine_key
         self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
         self._states_routes: Dict[AbstractState, Collection[Callable]] = {}
@@ -170,8 +168,7 @@ class FiniteStateMachine:
 
     def get_magazine(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
 
-        return Magazine(storage=self._storage, data_key=self._magazine_key,
-                        user_id=user_id, chat_id=chat_id)
+        return Magazine(storage=self._storage, user_id=user_id, chat_id=chat_id)
 
     async def set_transitions_chronology(self, states: List[AbstractState],
                                          user_id: Optional[int] = None,
