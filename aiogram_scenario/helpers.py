@@ -1,21 +1,13 @@
 import inspect
-from typing import Callable
+from typing import Callable, Union
 
 from aiogram.types import Update
 from aiogram.types.update import (Message, CallbackQuery, InlineQuery, ChosenInlineResult,
                                   ShippingQuery, PreCheckoutQuery, Poll, PollAnswer)
 
 
-EVENT_TYPES = (
-    Message,
-    CallbackQuery,
-    InlineQuery,
-    ChosenInlineResult,
-    ShippingQuery,
-    PreCheckoutQuery,
-    Poll,
-    PollAnswer
-)
+EVENT_UNION_TYPE = Union[Message, CallbackQuery, InlineQuery, ChosenInlineResult,
+                         ShippingQuery, PreCheckoutQuery, Poll, PollAnswer]
 _UPDATE_TYPES = (
     "message",
     "callback_query",
@@ -42,10 +34,12 @@ def get_existing_kwargs(callback: Callable,
     return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
 
 
-def get_current_event():
+def get_current_event() -> EVENT_UNION_TYPE:
 
     update = Update.get_current()
     for event_type_attr in _UPDATE_TYPES:
         event = getattr(update, event_type_attr)
         if event is not None:
             return event
+
+    raise RuntimeError("no event!")

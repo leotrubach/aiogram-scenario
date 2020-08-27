@@ -9,6 +9,7 @@ from .magazine import Magazine
 from .locking import TransitionsLocksStorage
 from aiogram_scenario import exceptions, helpers
 from aiogram_scenario.fsm.storages import BaseStorage
+from aiogram_scenario.helpers import EVENT_UNION_TYPE
 
 
 logger = logging.getLogger(__name__)
@@ -82,8 +83,8 @@ class FiniteStateMachine:
             self.add_transition(source_state, signal_handler, destination_state)
 
     async def execute_transition(self, source_state: AbstractState,
-                                 destination_state: AbstractState,
-                                 event,
+                                 destination_state: AbstractState, *,
+                                 event: EVENT_UNION_TYPE,
                                  context_kwargs: dict,
                                  magazine: Magazine,
                                  user_id: Optional[int] = None,
@@ -92,7 +93,7 @@ class FiniteStateMachine:
         if not magazine.is_loaded:
             raise exceptions.TransitionError("magazine is not loaded!")
 
-        with self._locks_storage.acquire(source_state, destination_state, user_id, chat_id):
+        with self._locks_storage.acquire(source_state, destination_state, user_id=user_id, chat_id=chat_id):
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
                          f"for '{user_id=}' in '{chat_id=}'...")
 
@@ -111,9 +112,9 @@ class FiniteStateMachine:
 
         logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
-    def import_transitions_from_csv(self, filename: str,
+    def import_transitions_from_csv(self, filename: str, *,
                                     states: Collection[AbstractState],
-                                    signal_handlers: Collection[Callable], *,
+                                    signal_handlers: Collection[Callable],
                                     encoding: str = "UTF-8",
                                     empty_cell: str = "",
                                     join_state: bool = True) -> None:
@@ -182,13 +183,13 @@ class FiniteStateMachine:
             writer = csv.writer(csv_fp)
             writer.writerows(rows)
 
-    async def execute_next_transition(self, signal_handler: Callable,
-                                      event,
+    async def execute_next_transition(self, signal_handler: Callable, *,
+                                      event: EVENT_UNION_TYPE,
                                       context_kwargs: dict,
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = self.get_magazine(user_id, chat_id)
+        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
         try:
             await magazine.load()
         except exceptions.MagazineInitializationError:
@@ -207,12 +208,12 @@ class FiniteStateMachine:
             chat_id=chat_id
         )
 
-    async def execute_back_transition(self, event,
+    async def execute_back_transition(self, *, event: EVENT_UNION_TYPE,
                                       context_kwargs: dict,
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = self.get_magazine(user_id, chat_id)
+        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
         await magazine.load()
 
         penultimate_state = magazine.penultimate_state
@@ -232,7 +233,7 @@ class FiniteStateMachine:
             chat_id=chat_id
         )
 
-    async def set_transitions_chronology(self, states: List[AbstractState],
+    async def set_transitions_chronology(self, states: List[AbstractState], *,
                                          user_id: Optional[int] = None,
                                          chat_id: Optional[int] = None,
                                          check: bool = True) -> None:
@@ -247,7 +248,7 @@ class FiniteStateMachine:
                     raise exceptions.TransitionsChronologyError(f"from '{source_state}' state it is impossible "
                                                                 f"to get into '{destination_state}' state!")
 
-        magazine = self.get_magazine(user_id, chat_id)
+        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
         await magazine.initialize(str(self.initial_state))
 
         for state in states:
@@ -256,12 +257,12 @@ class FiniteStateMachine:
 
         logger.debug(f"Chronology of transitions set for ({user_id=}, {chat_id=})")
 
-    def get_magazine(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
+    def get_magazine(self, *, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
 
         return Magazine(storage=self._storage, user_id=user_id, chat_id=chat_id)
 
     @property
-    def _signal_handlers(self) -> list:
+    def _signal_handlers(self) -> List[Callable]:
 
         signal_handlers = []
         for handlers in [i.keys() for i in self._transitions.values()]:
@@ -269,7 +270,7 @@ class FiniteStateMachine:
 
         return signal_handlers
 
-    async def _set_state(self, state: AbstractState,
+    async def _set_state(self, state: AbstractState, *,
                          user_id: Optional[int] = None,
                          chat_id: Optional[int] = None) -> None:
 

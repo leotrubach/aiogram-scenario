@@ -2,6 +2,7 @@ from typing import Optional, Callable
 import logging
 
 from .fsm import FiniteStateMachine
+from aiogram_scenario.helpers import EVENT_UNION_TYPE
 
 
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ class FSMPointer:
 
     def __init__(self, fsm: FiniteStateMachine,
                  signal_handler: Callable,
-                 event,
+                 event: EVENT_UNION_TYPE,
                  context_kwargs: dict,
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
@@ -23,7 +24,7 @@ class FSMPointer:
         self._user_id = user_id
         self._chat_id = chat_id
 
-    async def go_next(self):
+    async def go_next(self) -> None:
 
         logger.debug("FSM received a request to move to next state for "
                      f"'user_id={self._user_id}' in 'chat_id={self._chat_id}'")
@@ -35,7 +36,7 @@ class FSMPointer:
             chat_id=self._chat_id
         )
 
-    async def go_back(self):
+    async def go_back(self) -> None:
 
         logger.debug("FSM received a request to move to previous state for "
                      f"'user_id={self._user_id}' in 'chat_id={self._chat_id}'")

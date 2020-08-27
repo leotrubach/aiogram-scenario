@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class AbstractState(ABC):
@@ -31,12 +32,12 @@ class AbstractState(ABC):
         pass
 
     @property
-    def is_initial(self):
+    def is_initial(self) -> bool:
 
         return self._is_initial
 
     @property
-    def raw_value(self):
+    def raw_value(self) -> Optional[str]:
 
         if self._is_initial:
             return None

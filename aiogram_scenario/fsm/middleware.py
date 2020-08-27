@@ -19,7 +19,7 @@ class FiniteStateMachineMiddleware(BaseMiddleware):
 
         self._setup_fsm_pointer(data)
 
-    async def on_process_error(self, _, exception, data: dict):  # noqa
+    async def on_process_error(self, _, exception: Exception, data: dict):  # noqa
 
         self._setup_fsm_pointer(data)
 

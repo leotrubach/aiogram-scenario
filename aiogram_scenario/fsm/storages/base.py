@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, List
 
 from aiogram.dispatcher import storage
 
@@ -27,12 +27,12 @@ class BaseStorage(storage.BaseStorage, ABC):
     @abstractmethod
     async def set_magazine(self, *, chat: Union[str, int, None] = None,
                            user: Union[str, int, None] = None,
-                           states: list):
+                           states: list) -> None:
 
         pass
 
     @abstractmethod
     async def get_magazine(self, *, chat: Union[str, int, None] = None,
-                           user: Union[str, int, None] = None):
+                           user: Union[str, int, None] = None) -> List[str]:
 
         pass

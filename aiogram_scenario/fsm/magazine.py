@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class Magazine:
 
-    def __init__(self, storage: BaseStorage,
+    def __init__(self, storage: BaseStorage, *,
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
 
@@ -30,7 +30,7 @@ class Magazine:
     __repr__ = __str__
 
     @property
-    def is_loaded(self):
+    def is_loaded(self) -> bool:
 
         return bool(self._states)
 
@@ -98,7 +98,8 @@ class Magazine:
     async def commit(self) -> None:
 
         await self._update_storage(self._states)
-        logger.debug(f"Magazine has committed states {self._states} to storage (user_id={self._user_id}, chat_id={self._chat_id})")
+        logger.debug(f"Magazine has committed states {self._states} to storage "
+                     f"(user_id={self._user_id}, chat_id={self._chat_id})")
 
     async def _update_storage(self, states: List[str]) -> None:
 

@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 from aiogram.contrib.fsm_storage import memory
 
@@ -19,13 +19,13 @@ class MemoryStorage(BaseStorage, memory.MemoryStorage):
 
     async def set_magazine(self, *, chat: Union[str, int, None] = None,
                            user: Union[str, int, None] = None,
-                           states: list):
+                           states: list) -> None:
 
         chat, user = self.resolve_address(chat=chat, user=user)
         self.data[chat][user]["magazine"] = states.copy()
 
     async def get_magazine(self, *, chat: Union[str, int, None] = None,
-                           user: Union[str, int, None] = None):
+                           user: Union[str, int, None] = None) -> List[str]:
 
         chat, user = self.resolve_address(chat=chat, user=user)
         return self.data[chat][user]["magazine"].copy()

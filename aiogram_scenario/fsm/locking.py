@@ -55,7 +55,7 @@ class TransitionsLocksStorage:
         self._locks = {}
 
     def acquire(self, source_state: AbstractState,
-                destination_state: AbstractState,
+                destination_state: AbstractState, *,
                 user_id: Optional[int] = None,
                 chat_id: Optional[int] = None) -> TransitionLockContext:
 
@@ -68,11 +68,11 @@ class TransitionsLocksStorage:
         )
 
     def add(self, source_state: AbstractState,
-            destination_state: AbstractState,
+            destination_state: AbstractState, *,
             user_id: Optional[int] = None,
             chat_id: Optional[int] = None) -> TransitionLock:
 
-        is_locked = self._check_locking(user_id, chat_id)
+        is_locked = self._check_locking(user_id=user_id, chat_id=chat_id)
         if is_locked:
             raise exceptions.TransitionLockingError(
                 source_state=source_state,
@@ -81,7 +81,7 @@ class TransitionsLocksStorage:
                 chat_id=chat_id
             )
 
-        self._set_lock(user_id, chat_id)
+        self._set_lock(user_id=user_id, chat_id=chat_id)
         lock = TransitionLock(
             source_state=source_state,
             destination_state=destination_state,
@@ -99,13 +99,13 @@ class TransitionsLocksStorage:
         if not lock.is_active:
             raise RuntimeError(f"transition lock ({lock}) was removed earlier!")
 
-        self._unset_lock(lock.user_id, lock.chat_id)
+        self._unset_lock(user_id=lock.user_id, chat_id=lock.chat_id)
         lock.is_active = False
 
         logger.debug(f"Lock is unset for (user_id={lock.user_id}, chat_id={lock.chat_id})")
 
     @staticmethod
-    def _resolve_address(user_id: Optional[int], chat_id: Optional[int]) -> Tuple[int, int]:
+    def _resolve_address(*, user_id: Optional[int], chat_id: Optional[int]) -> Tuple[int, int]:
 
         if chat_id is None and user_id is None:
             raise ValueError("'user' or 'chat' parameter is required but no one is provided!")
@@ -117,27 +117,27 @@ class TransitionsLocksStorage:
 
         return user_id, chat_id
 
-    def _set_lock(self, user_id: Optional[int], chat_id: Optional[int]) -> None:
+    def _set_lock(self, *, user_id: Optional[int], chat_id: Optional[int]) -> None:
 
-        user_id, chat_id = self._resolve_address(user_id, chat_id)
+        user_id, chat_id = self._resolve_address(user_id=user_id, chat_id=chat_id)
 
         try:
             self._locks[chat_id].add(user_id)
         except KeyError:
             self._locks[chat_id] = {user_id}
 
-    def _unset_lock(self, user_id: Optional[int], chat_id: Optional[int]) -> None:
+    def _unset_lock(self, *, user_id: Optional[int], chat_id: Optional[int]) -> None:
 
-        user_id, chat_id = self._resolve_address(user_id, chat_id)
+        user_id, chat_id = self._resolve_address(user_id=user_id, chat_id=chat_id)
 
         chat_users_ids: set = self._locks[chat_id]
         chat_users_ids.remove(user_id)
         if not chat_users_ids:
             del self._locks[chat_id]
 
-    def _check_locking(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> bool:
+    def _check_locking(self, *, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> bool:
 
-        user_id, chat_id = self._resolve_address(user_id, chat_id)
+        user_id, chat_id = self._resolve_address(user_id=user_id, chat_id=chat_id)
 
         try:
             chat_users_ids: set = self._locks[chat_id]

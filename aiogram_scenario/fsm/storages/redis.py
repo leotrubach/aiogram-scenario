@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 
 from aiogram.contrib.fsm_storage import redis
 from aiogram.utils import json
@@ -13,7 +13,7 @@ class RedisStorage(BaseStorage, redis.RedisStorage2):
 
     async def set_magazine(self, *, chat: Union[str, int, None] = None,
                            user: Union[str, int, None] = None,
-                           states: list):
+                           states: list) -> None:
 
         chat, user = self.check_address(chat=chat, user=user)
         key = self.generate_key(chat, user, STATE_MAGAZINE_KEY)
@@ -21,7 +21,7 @@ class RedisStorage(BaseStorage, redis.RedisStorage2):
         await redis_.set(key, json.dumps(states), expire=self._state_ttl)
 
     async def get_magazine(self, *, chat: Union[str, int, None] = None,
-                           user: Union[str, int, None] = None):
+                           user: Union[str, int, None] = None) -> List[str]:
 
         chat, user = self.check_address(chat=chat, user=user)
         key = self.generate_key(chat, user, STATE_MAGAZINE_KEY)

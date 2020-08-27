@@ -6,7 +6,7 @@ from .state import AbstractState
 class BaseStatesGroup:
 
     @classmethod
-    def select(cls, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
+    def select(cls, *, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
 
         cls_values = vars(cls).values()
 
