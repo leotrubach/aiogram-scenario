@@ -80,3 +80,8 @@ class ExportTransitionsToCSVError(Exception):
 class ImportTransitionsFromCSVError(Exception):
 
     pass
+
+
+class TransitionsChronologyError(Exception):
+
+    pass

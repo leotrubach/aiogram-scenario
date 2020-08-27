@@ -232,6 +232,30 @@ class FiniteStateMachine:
             chat_id=chat_id
         )
 
+    async def set_transitions_chronology(self, states: List[AbstractState],
+                                         user_id: Optional[int] = None,
+                                         chat_id: Optional[int] = None,
+                                         check: bool = True) -> None:
+
+        if check:
+            for i in range(len(states)):
+                if i == (len(states) - 1):
+                    break
+                source_state = states[i]
+                destination_state = states[i + 1]
+                if destination_state not in self._transitions[source_state].values():
+                    raise exceptions.TransitionsChronologyError(f"from '{source_state}' state it is impossible "
+                                                                f"to get into '{destination_state}' state!")
+
+        magazine = self.get_magazine(user_id, chat_id)
+        await magazine.initialize(str(self.initial_state))
+
+        for state in states:
+            magazine.set(str(state))
+        await magazine.commit()
+
+        logger.debug(f"Chronology of transitions set for ({user_id=}, {chat_id=})")
+
     def get_magazine(self, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
 
         return Magazine(storage=self._storage, user_id=user_id, chat_id=chat_id)
@@ -244,18 +268,6 @@ class FiniteStateMachine:
             signal_handlers.extend([handler for handler in handlers if handler not in signal_handlers])
 
         return signal_handlers
-
-    # async def set_transitions_chronology(self, states: List[AbstractState],
-    #                                      user_id: Optional[int] = None,
-    #                                      chat_id: Optional[int] = None) -> None:
-    #
-    #     # TODO: Add ability to check correctness of the chronology
-    #     magazine = self.get_magazine(user_id, chat_id)
-    #     await magazine.initialize(str(self.initial_state))
-    #
-    #     for state in states:
-    #         magazine.set(str(state))
-    #     await magazine.commit()
 
     async def _set_state(self, state: AbstractState,
                          user_id: Optional[int] = None,
