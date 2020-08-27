@@ -70,3 +70,8 @@ class MagazineInitializationError(MagazineError):
 class MagazineIsNotLoadedError(MagazineError):
 
     pass
+
+
+class ExportCSVError(Exception):
+
+    pass
