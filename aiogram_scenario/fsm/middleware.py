@@ -7,7 +7,7 @@ from .fsm_pointer import FSMPointer
 from aiogram_scenario import helpers
 
 
-class FiniteStateMachineMiddleware(BaseMiddleware):
+class FSMMiddleware(BaseMiddleware):
 
     def __init__(self, fsm: FiniteStateMachine, fsm_pointer_arg: str = "fsm"):
 
