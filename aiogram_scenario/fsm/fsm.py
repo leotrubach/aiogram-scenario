@@ -19,6 +19,10 @@ class FiniteStateMachine:
 
     def __init__(self, dispatcher: Dispatcher, storage: BaseStorage):
 
+        if not isinstance(storage, BaseStorage):
+            raise exceptions.StorageError("invalid storage type! Try to choose from the ones "
+                                          "suggested here: aiogram_scenario.fsm.storages")
+
         self._dispatcher = dispatcher
         self._storage = storage
         self._locks_storage = TransitionsLocksStorage()

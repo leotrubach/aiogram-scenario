@@ -85,3 +85,8 @@ class ImportTransitionsFromCSVError(Exception):
 class TransitionsChronologyError(Exception):
 
     pass
+
+
+class StorageError(Exception):
+
+    pass

@@ -14,6 +14,9 @@ class Magazine:
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
 
+        if not isinstance(storage, BaseStorage):
+            raise exceptions.StorageError("invalid storage type! Try to choose from the ones "
+                                          "suggested here: aiogram_scenario.fsm.storages")
         if chat_id is None and user_id is None:
             raise ValueError(f"at least one parameter must be specified ({user_id=}, {chat_id=})!")
 
