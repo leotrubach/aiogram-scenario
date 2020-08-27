@@ -111,32 +111,66 @@ class FiniteStateMachine:
 
         logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
-    # def import_transitions_from_csv(self):
-    #
-    #     ...
+    def import_transitions_from_csv(self, filename: str,
+                                    states: Collection[AbstractState],
+                                    signal_handlers: Collection[Callable], *,
+                                    encoding: str = "UTF-8",
+                                    empty_cell: str = "",
+                                    join_state: bool = True) -> None:
+
+        if not states:
+            raise exceptions.ImportTransitionsFromCSVError("no states!")
+        if not signal_handlers:
+            raise exceptions.ImportTransitionsFromCSVError("no signal handlers!")
+
+        with open(filename, encoding=encoding, newline="") as csv_fp:
+            reader = csv.reader(csv_fp)
+            rows = list(reader)
+
+        if join_state:
+            for row in rows:
+                for index, cell in enumerate(row[1:], start=1):
+                    if (cell != empty_cell) and (not cell.endswith("State")):
+                        row[index] = cell + "State"
+
+        source_states = rows[0][1:]
+
+        states_mapping = {str(state): state for state in states}
+        signal_handlers_mapping = {handler.__name__: handler for handler in signal_handlers}
+
+        for row in rows[1:]:
+            signal_handler = row[0]
+            for index, destination_state in enumerate(row[1:]):
+                if destination_state != empty_cell:
+                    source_state = source_states[index]
+                    self.add_transition(
+                        source_state=states_mapping[source_state],
+                        signal_handler=signal_handlers_mapping[signal_handler],
+                        destination_state=states_mapping[destination_state]
+                    )
 
     def export_transitions_to_csv(self, filename: str, *,
                                   encoding: str = "UTF-8",
                                   empty_cell: str = "",
-                                  cut_state: bool = True):
+                                  cut_state: bool = True) -> None:
 
         if not self._transitions:
-            raise exceptions.ExportCSVError("no transitions set for export!")
+            raise exceptions.ExportTransitionsToCSVError("no transitions set for export!")
 
         rows = [["", *self._states_mapping.keys()]]
         source_states = self.source_states
         signal_handlers = self._signal_handlers
 
-        for handler in signal_handlers:
+        for signal_handler in signal_handlers:
             destination_states = []
-            for state in source_states:
-                destination_state = self._transitions[state].get(handler)
+            for source_state in source_states:
+                destination_state = self._transitions[source_state].get(signal_handler)
                 if destination_state is None:
                     destination_state = empty_cell
                 else:
                     destination_state = str(destination_state)
                 destination_states.append(destination_state)
-            rows.append([handler.__name__, *destination_states])
+            rows.append([signal_handler.__name__, *destination_states])
 
         if cut_state:
             for row in rows:
