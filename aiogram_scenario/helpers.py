@@ -2,9 +2,21 @@ import inspect
 from typing import Callable
 
 from aiogram.types import Update
+from aiogram.types.update import (Message, CallbackQuery, InlineQuery, ChosenInlineResult,
+                                  ShippingQuery, PreCheckoutQuery, Poll, PollAnswer)
 
 
 EVENT_TYPES = (
+    Message,
+    CallbackQuery,
+    InlineQuery,
+    ChosenInlineResult,
+    ShippingQuery,
+    PreCheckoutQuery,
+    Poll,
+    PollAnswer
+)
+_UPDATE_TYPES = (
     "message",
     "callback_query",
     "inline_query",
@@ -33,7 +45,7 @@ def get_existing_kwargs(callback: Callable,
 def get_current_event():
 
     update = Update.get_current()
-    for event_type_attr in EVENT_TYPES:
+    for event_type_attr in _UPDATE_TYPES:
         event = getattr(update, event_type_attr)
         if event is not None:
             return event
