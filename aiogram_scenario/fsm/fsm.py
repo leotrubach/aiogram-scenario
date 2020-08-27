@@ -141,9 +141,8 @@ class FiniteStateMachine:
         if cut_state:
             for row in rows:
                 for index, cell in enumerate(row[1:], start=1):
-                    if cell != empty_cell:
-                        if cell.endswith("State"):
-                            row[index] = cell[:-5]
+                    if (cell != empty_cell) and (cell.endswith("State")):
+                        row[index] = cell[:-5]
 
         with open(filename, "w", encoding=encoding, newline="") as csv_fp:
             writer = csv.writer(csv_fp)
