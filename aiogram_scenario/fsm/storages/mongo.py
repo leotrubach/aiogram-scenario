@@ -43,7 +43,7 @@ class MongoStorage(BaseStorage, mongo.MongoStorage):
             await db[MAGAZINE].drop()
 
     @staticmethod
-    def apply_index(db):
+    async def apply_index(db):
 
         for collection in COLLECTIONS:
             await db[collection].create_index(keys=[('chat', 1), ('user', 1)],
