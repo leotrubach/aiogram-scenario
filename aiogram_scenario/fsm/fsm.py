@@ -71,6 +71,9 @@ class FiniteStateMachine:
 
         self._transitions[source_state][signal_handler] = destination_state
 
+        logger.debug(f"Added transition from '{source_state}' "
+                     f"('{signal_handler.__qualname__}') to '{destination_state}'")
+
     def add_transitions(self, source_states: Collection[AbstractState],
                         signal_handler: Callable,
                         destination_state: AbstractState) -> None:
