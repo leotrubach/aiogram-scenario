@@ -14,6 +14,9 @@ class Magazine:
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
 
+        if chat_id is None and user_id is None:
+            raise ValueError(f"at least one parameter must be specified ({user_id=}, {chat_id=})!")
+
         self._storage = storage
         self._user_id = user_id
         self._chat_id = chat_id
