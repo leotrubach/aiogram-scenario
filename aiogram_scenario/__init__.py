@@ -1,4 +1,4 @@
-from .fsm import (FiniteStateMachine, FSMPointer, Magazine, FSMMiddleware,
+from .fsm import (FiniteStateMachine, FSMPointer, FSMMiddleware,
                   AbstractState, BaseStatesGroup)
 from .registrars import MainRegistrar, Registrar
 from . import exceptions

@@ -31,6 +31,11 @@ class AbstractState(ABC):
 
         pass
 
+    @abstractmethod
+    def register_handlers(self, *args, **reg_kwargs) -> None:
+
+        pass
+
     @property
     def is_initial(self) -> bool:
 
@@ -43,8 +48,3 @@ class AbstractState(ABC):
             return None
         else:
             return str(self)
-
-    @abstractmethod
-    def register_handlers(self, *args, **reg_kwargs) -> None:
-
-        pass

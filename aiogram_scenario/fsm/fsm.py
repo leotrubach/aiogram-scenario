@@ -2,13 +2,11 @@ from typing import Optional, List, Callable, Collection, Dict
 import logging
 import csv
 
-from aiogram import Dispatcher
-
 from .state import AbstractState
-from .magazine import Magazine
 from .locking import TransitionsLocksStorage
 from aiogram_scenario import exceptions, helpers
 from aiogram_scenario.fsm.storages import BaseStorage
+from aiogram_scenario.fsm.storages.base import Magazine
 from aiogram_scenario.helpers import EVENT_UNION_TYPE
 
 
@@ -17,13 +15,12 @@ logger = logging.getLogger(__name__)
 
 class FiniteStateMachine:
 
-    def __init__(self, dispatcher: Dispatcher, storage: BaseStorage):
+    def __init__(self, storage: BaseStorage):
 
         if not isinstance(storage, BaseStorage):
             raise exceptions.StorageError("invalid storage type! Try to choose from the ones "
                                           "suggested here: aiogram_scenario.fsm.storages")
 
-        self._dispatcher = dispatcher
         self._storage = storage
         self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
@@ -43,6 +40,11 @@ class FiniteStateMachine:
 
         return list(self._transitions.keys())
 
+    @property
+    def states(self) -> List[AbstractState]:
+
+        return list(self._states_mapping.values())
+
     def set_initial_state(self, state: AbstractState) -> None:
 
         if self._initial_state is not None:
@@ -61,20 +63,22 @@ class FiniteStateMachine:
 
         if source_state == destination_state:
             raise exceptions.AddingTransitionError(f"source state '{source_state}' is the same as destination state!")
-        elif self._transitions.get(source_state) is None:
+        for state in (source_state, destination_state):
+            if state.is_initial and (state is not self.initial_state):
+                raise exceptions.AddingTransitionError(f"source state '{source_state}' is defined as initial state, "
+                                                       "but it is different from the set initial "
+                                                       f"state of the machine ('{self.initial_state}')!")
+            if self._states_mapping.get(state.raw_value) is None:
+                self._states_mapping[state.raw_value] = state
 
-            if source_state.is_initial:
-                if any(i.is_initial for i in self.source_states):
-                    raise exceptions.AddingTransitionError("initial state has already been added earlier! "
-                                                           f"Source state '{source_state}' is indicated as initial!")
-            self._transitions[source_state] = {}
-            self._states_mapping[str(source_state)] = source_state
-        elif self._transitions[source_state].get(signal_handler) is not None:
-            raise exceptions.AddingTransitionError("transition for the signal handler "
-                                                   f"'{signal_handler.__qualname__}' is already defined "
-                                                   f"in '{source_state}' state!")
-
-        self._transitions[source_state][signal_handler] = destination_state
+        if source_state not in self.source_states:
+            self._transitions[source_state] = {signal_handler: destination_state}
+        else:
+            if self._transitions[source_state].get(signal_handler) is not None:
+                raise exceptions.AddingTransitionError("transition for the signal handler "
+                                                       f"'{signal_handler.__qualname__}' is already defined "
+                                                       f"in '{source_state}' state!")
+            self._transitions[source_state][signal_handler] = destination_state
 
         logger.debug(f"Added transition from '{source_state}' "
                      f"('{signal_handler.__qualname__}') to '{destination_state}'")
@@ -90,12 +94,16 @@ class FiniteStateMachine:
                                  destination_state: AbstractState, *,
                                  event: EVENT_UNION_TYPE,
                                  context_kwargs: dict,
-                                 magazine: Magazine,
+                                 magazine: Optional[Magazine] = None,
                                  user_id: Optional[int] = None,
                                  chat_id: Optional[int] = None) -> None:
 
-        if not magazine.is_loaded:
-            raise exceptions.TransitionError("magazine is not loaded!")
+        if magazine is not None:
+            if not magazine.is_loaded:
+                raise exceptions.TransitionError("magazine is not loaded!")
+        else:
+            magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
+            await magazine.load()
 
         with self._locks_storage.acquire(source_state, destination_state, user_id=user_id, chat_id=chat_id):
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
@@ -108,11 +116,8 @@ class FiniteStateMachine:
             logger.debug(f"Produced exit from state '{source_state}' for '{user_id=}' in '{chat_id=}'")
             await destination_state.process_enter(event, **enter_kwargs)
             logger.debug(f"Produced enter to state '{destination_state}' for '{user_id=}' in '{chat_id=}'")
-
-            await self._set_state(destination_state, user_id=user_id, chat_id=chat_id)
-
-            magazine.set(str(destination_state))
-            await magazine.commit()
+            await magazine.push(destination_state.raw_value)
+            logger.debug(f"State '{destination_state}' is set for '{user_id=}' in '{chat_id=}'")
 
         logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
@@ -140,7 +145,7 @@ class FiniteStateMachine:
 
         source_states = rows[0][1:]
 
-        states_mapping = {str(state): state for state in states}
+        states_mapping = {state.raw_value: state for state in states}
         signal_handlers_mapping = {handler.__name__: handler for handler in signal_handlers}
 
         for row in rows[1:]:
@@ -193,14 +198,14 @@ class FiniteStateMachine:
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
-        try:
-            await magazine.load()
-        except exceptions.MagazineInitializationError:
-            await magazine.initialize(str(self.initial_state))
+        magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
+        await magazine.load()
 
         source_state = self._states_mapping[magazine.current_state]
-        destination_state = self._transitions[source_state][signal_handler]
+        try:
+            destination_state = self._transitions[source_state][signal_handler]
+        except KeyError:
+            raise exceptions.TransitionError(f"no next transition are defined for '{source_state}' state!")
 
         await self.execute_transition(
             source_state=source_state,
@@ -217,12 +222,14 @@ class FiniteStateMachine:
                                       user_id: Optional[int] = None,
                                       chat_id: Optional[int] = None) -> None:
 
-        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
+        magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
 
-        penultimate_state = magazine.penultimate_state
-        if penultimate_state is None:
-            raise exceptions.TransitionError("there are not enough states in the magazine to return!")
+        try:
+            penultimate_state = magazine.penultimate_state
+        except exceptions.StateNotFoundError:
+            raise exceptions.TransitionError("there are not enough states in the "
+                                             f"magazine to return ({user_id=}, {chat_id=})!")
 
         source_state = self._states_mapping[magazine.current_state]
         destination_state = self._states_mapping[penultimate_state]
@@ -252,18 +259,12 @@ class FiniteStateMachine:
                     raise exceptions.TransitionsChronologyError(f"from '{source_state}' state it is impossible "
                                                                 f"to get into '{destination_state}' state!")
 
-        magazine = self.get_magazine(user_id=user_id, chat_id=chat_id)
-        await magazine.initialize(str(self.initial_state))
-
+        magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         for state in states:
-            magazine.set(str(state))
+            magazine.set(state.raw_value)
         await magazine.commit()
 
         logger.debug(f"Chronology of transitions set for ({user_id=}, {chat_id=})")
-
-    def get_magazine(self, *, user_id: Optional[int] = None, chat_id: Optional[int] = None) -> Magazine:
-
-        return Magazine(storage=self._storage, user_id=user_id, chat_id=chat_id)
 
     @property
     def _signal_handlers(self) -> List[Callable]:
@@ -273,12 +274,3 @@ class FiniteStateMachine:
             signal_handlers.extend([handler for handler in handlers if handler not in signal_handlers])
 
         return signal_handlers
-
-    async def _set_state(self, state: AbstractState, *,
-                         user_id: Optional[int] = None,
-                         chat_id: Optional[int] = None) -> None:
-
-        fsm_context = self._dispatcher.current_state(chat=chat_id, user=user_id)
-        await fsm_context.set_state(state.raw_value)
-
-        logger.debug(f"State '{state}' is set for '{user_id=}' in '{chat_id=}'")

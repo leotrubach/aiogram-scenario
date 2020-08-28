@@ -62,11 +62,6 @@ class MagazineError(Exception):
     pass
 
 
-class MagazineInitializationError(MagazineError):
-
-    pass
-
-
 class MagazineIsNotLoadedError(MagazineError):
 
     pass
