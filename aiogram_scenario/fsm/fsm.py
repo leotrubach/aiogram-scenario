@@ -1,6 +1,5 @@
 from typing import Optional, List, Callable, Collection, Dict
 import logging
-import csv
 
 from .state import AbstractState
 from .locking import TransitionsLocksStorage
@@ -8,6 +7,7 @@ from aiogram_scenario import exceptions, helpers
 from aiogram_scenario.fsm.storages import BaseStorage
 from aiogram_scenario.fsm.storages.base import Magazine
 from aiogram_scenario.helpers import EVENT_UNION_TYPE
+from aiogram_scenario.transitions_storages.base import AbstractTransitionsStorage
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class FiniteStateMachine:
         self._locks_storage = TransitionsLocksStorage()
         self._initial_state: Optional[AbstractState] = None
         self._transitions: Dict[AbstractState, Dict[Callable, AbstractState]] = {}
-        self._states_mapping: Dict[str, AbstractState] = {}
+        self._states_mapping: Dict[Optional[str], AbstractState] = {}
 
     @property
     def initial_state(self) -> AbstractState:
@@ -121,76 +121,63 @@ class FiniteStateMachine:
 
         logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
 
-    def import_transitions_from_csv(self, filename: str, *,
-                                    states: Collection[AbstractState],
-                                    signal_handlers: Collection[Callable],
-                                    encoding: str = "UTF-8",
-                                    empty_cell: str = "",
-                                    join_state: bool = True) -> None:
+    def import_transitions(self, storage: AbstractTransitionsStorage, *,
+                           states: Collection[AbstractState],
+                           signal_handlers: Collection[Callable],
+                           join_state_postfix: bool = True) -> None:
 
         if not states:
-            raise exceptions.ImportTransitionsFromCSVError("no states!")
+            raise exceptions.ImportTransitionsError("no states!")
         if not signal_handlers:
-            raise exceptions.ImportTransitionsFromCSVError("no signal handlers!")
+            raise exceptions.ImportTransitionsError("no signal handlers!")
 
-        with open(filename, encoding=encoding, newline="") as csv_fp:
-            reader = csv.reader(csv_fp)
-            rows = list(reader)
+        transitions = storage.read()
+        if join_state_postfix:
+            transitions = {
+                f"{source_state}State": {
+                    signal_handler: f"{transitions[source_state][signal_handler]}State"
+                    for signal_handler in transitions[source_state]
+                }
+                for source_state in transitions.keys()
+            }
 
-        if join_state:
-            for row in rows:
-                for index, cell in enumerate(row[1:], start=1):
-                    if (cell != empty_cell) and (not cell.endswith("State")):
-                        row[index] = cell + "State"
-
-        source_states = rows[0][1:]
-
-        states_mapping = {state.raw_value: state for state in states}
+        states_mapping = {str(state): state for state in states}
         signal_handlers_mapping = {handler.__name__: handler for handler in signal_handlers}
 
-        for row in rows[1:]:
-            signal_handler = row[0]
-            for index, destination_state in enumerate(row[1:]):
-                if destination_state != empty_cell:
-                    source_state = source_states[index]
-                    self.add_transition(
-                        source_state=states_mapping[source_state],
-                        signal_handler=signal_handlers_mapping[signal_handler],
-                        destination_state=states_mapping[destination_state]
-                    )
+        for source_state in transitions.keys():
+            for signal_handler in transitions[source_state].keys():
+                destination_state = transitions[source_state][signal_handler]
+                self.add_transition(
+                    source_state=states_mapping[source_state],
+                    signal_handler=signal_handlers_mapping[signal_handler],
+                    destination_state=states_mapping[destination_state]
+                )
 
-    def export_transitions_to_csv(self, filename: str, *,
-                                  encoding: str = "UTF-8",
-                                  empty_cell: str = "",
-                                  cut_state: bool = True) -> None:
+    def export_transitions(self, storage: AbstractTransitionsStorage, *,
+                           cut_state_postfix: bool = True) -> None:
 
         if not self._transitions:
-            raise exceptions.ExportTransitionsToCSVError("no transitions set for export!")
+            raise exceptions.ExportTransitionsError("no transitions set for export!")
 
-        rows = [["", *self._states_mapping.keys()]]
+        transitions = {}
         source_states = self.source_states
-        signal_handlers = self._signal_handlers
 
-        for signal_handler in signal_handlers:
-            destination_states = []
-            for source_state in source_states:
-                destination_state = self._transitions[source_state].get(signal_handler)
-                if destination_state is None:
-                    destination_state = empty_cell
-                else:
-                    destination_state = str(destination_state)
-                destination_states.append(destination_state)
-            rows.append([signal_handler.__name__, *destination_states])
+        for source_state in source_states:
+            transitions[str(source_state)] = {}
+            for signal_handler in self._transitions[source_state].keys():
+                destination_state = self._transitions[source_state][signal_handler]
+                transitions[str(source_state)][signal_handler.__name__] = str(destination_state)
 
-        if cut_state:
-            for row in rows:
-                for index, cell in enumerate(row[1:], start=1):
-                    if (cell != empty_cell) and (cell.endswith("State")):
-                        row[index] = cell[:-5]
+        if cut_state_postfix:
+            transitions = {
+                source_state.rsplit("State")[0]: {
+                    signal_handler: transitions[source_state][signal_handler].rsplit("State")[0]
+                    for signal_handler in transitions[source_state]
+                }
+                for source_state in transitions.keys()
+            }
 
-        with open(filename, "w", encoding=encoding, newline="") as csv_fp:
-            writer = csv.writer(csv_fp)
-            writer.writerows(rows)
+        storage.write(transitions)
 
     async def execute_next_transition(self, signal_handler: Callable, *,
                                       event: EVENT_UNION_TYPE,
@@ -270,7 +257,9 @@ class FiniteStateMachine:
     def _signal_handlers(self) -> List[Callable]:
 
         signal_handlers = []
-        for handlers in [i.keys() for i in self._transitions.values()]:
-            signal_handlers.extend([handler for handler in handlers if handler not in signal_handlers])
+        for handlers in (i.keys() for i in self._transitions.values()):
+            for handler in handlers:
+                if handler not in signal_handlers:
+                    signal_handlers.append(handler)
 
         return signal_handlers

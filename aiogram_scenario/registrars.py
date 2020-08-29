@@ -279,6 +279,6 @@ class MainRegistrar:
             reg_partial(state=state.raw_value)
 
         handler_type = reg_partial.func.__name__.replace("register_", "", 1).replace("_handler", "", 1)
-        callback_name = reg_partial.keywords["callback"].__qualname__
+        callback_name = reg_partial.args[0].__qualname__
 
         logger.debug(f"Handler '{callback_name}' (type='{handler_type}') is registered on states: {states}!")

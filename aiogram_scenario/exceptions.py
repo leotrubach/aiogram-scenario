@@ -67,12 +67,12 @@ class MagazineIsNotLoadedError(MagazineError):
     pass
 
 
-class ExportTransitionsToCSVError(Exception):
+class ExportTransitionsError(Exception):
 
     pass
 
 
-class ImportTransitionsFromCSVError(Exception):
+class ImportTransitionsError(Exception):
 
     pass
 
