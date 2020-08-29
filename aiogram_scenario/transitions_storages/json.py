@@ -1,7 +1,7 @@
-from .base import AbstractTransitionsStorage
 from typing import Dict
-
 import json
+
+from .base import AbstractTransitionsStorage
 
 
 class JSONTransitionsStorage(AbstractTransitionsStorage):
