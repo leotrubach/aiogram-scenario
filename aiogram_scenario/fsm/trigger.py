@@ -8,17 +8,17 @@ from aiogram_scenario.helpers import EVENT_UNION_TYPE
 logger = logging.getLogger(__name__)
 
 
-class FSMPointer:
+class FSMTrigger:
 
     def __init__(self, fsm: FiniteStateMachine,
-                 signal_handler: Callable,
+                 trigger_func: Callable,
                  event: EVENT_UNION_TYPE,
                  context_kwargs: dict,
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
 
         self._fsm = fsm
-        self._signal_handler = signal_handler
+        self._trigger_func = trigger_func
         self._event = event
         self._context_kwargs = context_kwargs
         self._user_id = user_id
@@ -29,7 +29,7 @@ class FSMPointer:
         logger.debug("FSM received a request to move to next state for "
                      f"'user_id={self._user_id}' in 'chat_id={self._chat_id}'")
         await self._fsm.execute_next_transition(
-            signal_handler=self._signal_handler,
+            trigger_func=self._trigger_func,
             event=self._event,
             context_kwargs=self._context_kwargs,
             user_id=self._user_id,

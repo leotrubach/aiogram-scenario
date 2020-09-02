@@ -58,7 +58,7 @@ class FiniteStateMachine:
         logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
 
     def add_transition(self, source_state: AbstractState,
-                       signal_handler: Callable,
+                       trigger_func: Callable,
                        destination_state: AbstractState) -> None:
 
         if source_state == destination_state:
@@ -72,23 +72,23 @@ class FiniteStateMachine:
                 self._states_mapping[state.raw_value] = state
 
         if source_state not in self.source_states:
-            self._transitions[source_state] = {signal_handler: destination_state}
+            self._transitions[source_state] = {trigger_func: destination_state}
         else:
-            if self._transitions[source_state].get(signal_handler) is not None:
-                raise exceptions.AddingTransitionError("transition for the signal handler "
-                                                       f"'{signal_handler.__qualname__}' is already defined "
+            if self._transitions[source_state].get(trigger_func) is not None:
+                raise exceptions.AddingTransitionError("transition for trigger_func "
+                                                       f"'{trigger_func.__qualname__}' is already defined "
                                                        f"in '{source_state}' state!")
-            self._transitions[source_state][signal_handler] = destination_state
+            self._transitions[source_state][trigger_func] = destination_state
 
         logger.debug(f"Added transition from '{source_state}' "
-                     f"('{signal_handler.__qualname__}') to '{destination_state}'")
+                     f"('{trigger_func.__qualname__}') to '{destination_state}'")
 
     def add_transitions(self, source_states: Collection[AbstractState],
-                        signal_handler: Callable,
+                        trigger_func: Callable,
                         destination_state: AbstractState) -> None:
 
         for source_state in source_states:
-            self.add_transition(source_state, signal_handler, destination_state)
+            self.add_transition(source_state, trigger_func, destination_state)
 
     async def execute_transition(self, source_state: AbstractState,
                                  destination_state: AbstractState, *,
@@ -123,33 +123,33 @@ class FiniteStateMachine:
 
     def import_transitions(self, storage: AbstractTransitionsStorage, *,
                            states: Collection[AbstractState],
-                           signal_handlers: Collection[Callable],
+                           triggers_funcs: Collection[Callable],
                            join_state_postfix: bool = True) -> None:
 
         if not states:
             raise exceptions.ImportTransitionsError("no states!")
-        if not signal_handlers:
-            raise exceptions.ImportTransitionsError("no signal handlers!")
+        if not triggers_funcs:
+            raise exceptions.ImportTransitionsError("no triggers funcs!")
 
         transitions = storage.read()
         if join_state_postfix:
             transitions = {
                 f"{source_state}State": {
-                    signal_handler: f"{transitions[source_state][signal_handler]}State"
-                    for signal_handler in transitions[source_state]
+                    trigger_func: f"{transitions[source_state][trigger_func]}State"
+                    for trigger_func in transitions[source_state]
                 }
                 for source_state in transitions.keys()
             }
 
         states_mapping = {str(state): state for state in states}
-        signal_handlers_mapping = {handler.__name__: handler for handler in signal_handlers}
+        triggers_funcs_mapping = {trigger.__name__: trigger for trigger in triggers_funcs}
 
         for source_state in transitions.keys():
-            for signal_handler in transitions[source_state].keys():
-                destination_state = transitions[source_state][signal_handler]
+            for trigger_func in transitions[source_state].keys():
+                destination_state = transitions[source_state][trigger_func]
                 self.add_transition(
                     source_state=states_mapping[source_state],
-                    signal_handler=signal_handlers_mapping[signal_handler],
+                    trigger_func=triggers_funcs_mapping[trigger_func],
                     destination_state=states_mapping[destination_state]
                 )
 
@@ -164,22 +164,22 @@ class FiniteStateMachine:
 
         for source_state in source_states:
             transitions[str(source_state)] = {}
-            for signal_handler in self._transitions[source_state].keys():
-                destination_state = self._transitions[source_state][signal_handler]
-                transitions[str(source_state)][signal_handler.__name__] = str(destination_state)
+            for trigger_func in self._transitions[source_state].keys():
+                destination_state = self._transitions[source_state][trigger_func]
+                transitions[str(source_state)][trigger_func.__name__] = str(destination_state)
 
         if cut_state_postfix:
             transitions = {
                 source_state.rsplit("State")[0]: {
-                    signal_handler: transitions[source_state][signal_handler].rsplit("State")[0]
-                    for signal_handler in transitions[source_state]
+                    trigger_func: transitions[source_state][trigger_func].rsplit("State")[0]
+                    for trigger_func in transitions[source_state]
                 }
                 for source_state in transitions.keys()
             }
 
         storage.write(transitions)
 
-    async def execute_next_transition(self, signal_handler: Callable, *,
+    async def execute_next_transition(self, trigger_func: Callable, *,
                                       event: EVENT_UNION_TYPE,
                                       context_kwargs: dict,
                                       user_id: Optional[int] = None,
@@ -190,7 +190,7 @@ class FiniteStateMachine:
 
         source_state = self._states_mapping[magazine.current_state]
         try:
-            destination_state = self._transitions[source_state][signal_handler]
+            destination_state = self._transitions[source_state][trigger_func]
         except KeyError:
             raise exceptions.TransitionError(f"no next transition are defined for '{source_state}' state!")
 
@@ -254,12 +254,12 @@ class FiniteStateMachine:
         logger.debug(f"Chronology of transitions set for ({user_id=}, {chat_id=})")
 
     @property
-    def _signal_handlers(self) -> List[Callable]:
+    def _triggers_funcs(self) -> List[Callable]:
 
-        signal_handlers = []
-        for handlers in (i.keys() for i in self._transitions.values()):
-            for handler in handlers:
-                if handler not in signal_handlers:
-                    signal_handlers.append(handler)
+        triggers_funcs = []
+        for triggers in (i.keys() for i in self._transitions.values()):
+            for trigger in triggers:
+                if trigger not in triggers_funcs:
+                    triggers_funcs.append(trigger)
 
-        return signal_handlers
+        return triggers_funcs
