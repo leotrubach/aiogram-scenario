@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 from dataclasses import dataclass
 import logging
 
-from .state import AbstractState
+from aiogram_scenario.fsm.state import AbstractState
 from aiogram_scenario import exceptions
 
 
@@ -122,7 +122,7 @@ class TransitionsLocksStorage:
         user_id, chat_id = self._resolve_address(user_id=user_id, chat_id=chat_id)
 
         try:
-            self._locks[chat_id].add(user_id)
+            self._locks[chat_id].add_transition(user_id)
         except KeyError:
             self._locks[chat_id] = {user_id}
 
