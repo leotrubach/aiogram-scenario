@@ -58,7 +58,7 @@ def _create_fsm_folders(app_path: Path,
                                   "If you want to create a new - first delete the old!")
 
 
-def _create_state_module(path: Path, state: str, handlers: List[str], template_path: Path = STATE_TEMPLATE_PATH):
+def _create_state_module(path: Path, state: str, handlers: List[str], template_path: Path):
 
     state_path = path / _get_module_name_by_state_name(state)
 
@@ -66,17 +66,12 @@ def _create_state_module(path: Path, state: str, handlers: List[str], template_p
         template_content = file.read()
 
     rendered_template = template_content.format(
-        handlers="\n\n".join(["""async def {name}(event, fsm: FSMTrigger):\n    ...""".format(name=name)
-                              for name in handlers]),
+        handlers="\n\n\n".join(["""async def {name}(event, fsm: FSMTrigger):\n    ...""".format(name=name)
+                                for name in handlers]),
         state_name=state
     )
     with open(str(state_path), "w") as file:
         file.write(rendered_template)
-
-
-def _create_initial_state_module(path: Path, initial_state: str, handlers: List[str]):
-
-    _create_state_module(path, initial_state, handlers, INITIAL_STATE_TEMPLATE_PATH)
 
 
 def _create_init_module(path: Path, template_path: Path):
@@ -113,27 +108,27 @@ def _create_states_group_module(path: Path, initial_state: str, states: List[str
 
 def _create_initialize_module(path: Path,
                               initial_state: str,
-                              states_handlers: Dict[str, List[str]]):
+                              states_handlers: Dict[str, List[str]],
+                              states_mapping: Dict[str, str]):
 
     initialize_module_path = path / "initialize.py"
 
     with open(str(FSM_INITIALIZE_TEMPLATE_PATH)) as file:
         template_content = file.read()
 
-    states_mapping = {state: _get_module_name_by_state_name(state, name_only=True) for state in states_handlers.keys()}
-
     handlers_rows = []
-    last_state = None
     for state, handlers in states_handlers.items():
-        if (last_state is not None) and (state != last_state):
-            handlers_rows.append("\n")
+        handlers_rows.append(f"# {states_mapping[state].upper()}")
         for handler in handlers:
             handlers_rows.append(f"{states_mapping[state]}.{handler},")
+        if state != list(states_handlers.keys())[-1]:
+            handlers_rows.append("")
 
     rendered_template = template_content.format(
-        states_modules_imports="from .states import (\n" + ",\n    ".join([states_mapping[i]
-                                                                           for i in states_handlers.keys()]) + ",\n)",
-        initial_state=initial_state.upper(),
+        states_modules_imports="from .states import (\n    " + ",\n    ".join(
+            [states_mapping[i] for i in states_handlers.keys()]
+        ) + ",\n)",
+        initial_state=states_mapping[initial_state].upper(),
         handlers="\n            ".join(handlers_rows)
     )
 
@@ -156,20 +151,24 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
 
     _create_fsm_folders(app_path, fsm_path, fsm_states_path, rewrite)
 
-    states = list(transitions.keys())
-    for i in transitions.values():
-        states.extend(i.values())
-    states = list(set(states))
+    states = []
+    for source_state in transitions.keys():
+        if source_state not in states:
+            states.append(source_state)
+        for destination_state in transitions[source_state].values():
+            if destination_state not in states:
+                states.append(destination_state)
+
     states_mapping = {state: _get_module_name_by_state_name(state, name_only=True) for state in states}
 
-    _create_initial_state_module(fsm_states_path, initial_state, list(transitions[initial_state].keys()))
     for state in states:
-        _create_state_module(fsm_states_path, state, list(transitions[state].keys()))
+        if state == initial_state:
+            template_path = INITIAL_STATE_TEMPLATE_PATH
+        else:
+            template_path = STATE_TEMPLATE_PATH
+        _create_state_module(fsm_states_path, state, list(transitions[state].keys()), template_path)
     _create_init_module(fsm_states_path, INIT_STATES_TEMPLATE_PATH)
-
     _create_states_group_module(fsm_path, initial_state, states, states_mapping)
     states_handlers = {state: list(transitions[state].keys()) for state in transitions.keys()}
-
     _create_initialize_module(fsm_path, initial_state, states_handlers)
-
     _create_init_module(fsm_path, INIT_FSM_TEMPLATE_PATH)

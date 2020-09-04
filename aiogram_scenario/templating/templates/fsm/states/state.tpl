@@ -1,4 +1,6 @@
-from aiogram_scenario import AbstractState, FSMTrigger
+from aiogram_scenario.fsm.state import AbstractState
+from aiogram_scenario.fsm.trigger import FSMTrigger
+from aiogram_scenario.registrars import Registrar
 from aiogram.types import ...  # select event types (or remove the line)
 
 
