@@ -23,7 +23,7 @@ def fetch_version() -> str:
 setuptools.setup(
     name=LIB_NAME,
     version=fetch_version(),
-    packages=[PACKAGE_NAME],
+    packages=setuptools.find_packages(),
     url="https://github.com/Abstract-X/aiogram-scenario",
     license="MIT",
     author="Abstract-X",
@@ -32,5 +32,5 @@ setuptools.setup(
     install_requires=[
         "aiogram>=2.8,<3.0"
     ],
-    include_package_data=False
+    include_package_data=True
 )
