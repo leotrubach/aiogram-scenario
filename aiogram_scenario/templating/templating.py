@@ -16,6 +16,9 @@ INIT_STATES_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "__init__.tpl"
 STATES_GROUP_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "states_group.tpl"
 FSM_INITIALIZE_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "initialize.tpl"
 INIT_FSM_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "__init__.tpl"
+HANDLERS_COMMON_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "common.tpl"
+HANDLERS_REGISTRATION_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "registration.tpl"
+INIT_HANDLERS_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "__init__.tpl"
 
 
 def _get_module_name_by_state_name(state_name: str, name_only: bool = False) -> str:
@@ -39,20 +42,26 @@ def _get_module_name_by_state_name(state_name: str, name_only: bool = False) -> 
     return module_name
 
 
-def _create_fsm_folders(app_path: Path,
-                        fsm_path: Path,
-                        fsm_states_path: Path,
+def _make_fsm_dirs(fsm_dir: Path, fsm_states_dir: Path, handlers_dir: Path):
+
+    fsm_dir.mkdir()
+    fsm_states_dir.mkdir()
+    handlers_dir.mkdir()
+
+
+def _create_fsm_folders(app_dir: Path,
+                        fsm_dir: Path,
+                        fsm_states_dir: Path,
+                        handlers_dir: Path,
                         rewrite: bool) -> None:
 
-    app_path.mkdir(exist_ok=True)
+    app_dir.mkdir(exist_ok=True)
     try:
-        fsm_path.mkdir()
-        fsm_states_path.mkdir()
+        _make_fsm_dirs(fsm_dir, fsm_states_dir, handlers_dir)
     except FileExistsError:
         if rewrite:
-            shutil.rmtree(str(fsm_path))
-            fsm_path.mkdir()
-            fsm_states_path.mkdir()
+            shutil.rmtree(str(fsm_dir))
+            _make_fsm_dirs(fsm_dir, fsm_states_dir, handlers_dir)
         else:
             raise FileExistsError("you already have an existing FSM structure! "
                                   "If you want to create a new - first delete the old!")
@@ -136,6 +145,28 @@ def _create_initialize_module(path: Path,
         file.write(rendered_template)
 
 
+def _create_handlers_common_module(path: Path):
+
+    common_module_path = path / "common.py"
+
+    with open(str(HANDLERS_COMMON_TEMPLATE_PATH)) as file:
+        template_content = file.read()
+
+    with open(str(common_module_path), "w") as file:
+        file.write(template_content)
+
+
+def _create_handlers_registration_module(path: Path):
+
+    registration_module_path = path / "registration.py"
+
+    with open(str(HANDLERS_REGISTRATION_TEMPLATE_PATH)) as file:
+        template_content = file.read()
+
+    with open(str(registration_module_path), "w") as file:
+        file.write(template_content)
+
+
 def create_fsm_structure(storage: AbstractTransitionsStorage,
                          initial_state: str,
                          path: str = ".", *,
@@ -145,11 +176,12 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
     transitions = storage.read()
 
     path = Path(path)
-    app_path = path / app_name
-    fsm_path = app_path / "fsm"
-    fsm_states_path = fsm_path / "states"
+    app_dir = path / app_name
+    fsm_dir = app_dir / "fsm"
+    fsm_states_dir = fsm_dir / "states"
+    handlers_dir = app_dir / "handlers"
 
-    _create_fsm_folders(app_path, fsm_path, fsm_states_path, rewrite)
+    _create_fsm_folders(app_dir, fsm_dir, fsm_states_dir, handlers_dir, rewrite)
 
     states = []
     for source_state in transitions.keys():
@@ -166,9 +198,12 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
             template_path = INITIAL_STATE_TEMPLATE_PATH
         else:
             template_path = STATE_TEMPLATE_PATH
-        _create_state_module(fsm_states_path, state, list(transitions[state].keys()), template_path)
-    _create_init_module(fsm_states_path, INIT_STATES_TEMPLATE_PATH)
-    _create_states_group_module(fsm_path, initial_state, states, states_mapping)
+        _create_state_module(fsm_states_dir, state, list(transitions[state].keys()), template_path)
+    _create_init_module(fsm_states_dir, INIT_STATES_TEMPLATE_PATH)
+    _create_states_group_module(fsm_dir, initial_state, states, states_mapping)
     states_handlers = {state: list(transitions[state].keys()) for state in transitions.keys()}
-    _create_initialize_module(fsm_path, initial_state, states_handlers)
-    _create_init_module(fsm_path, INIT_FSM_TEMPLATE_PATH)
+    _create_initialize_module(fsm_dir, initial_state, states_handlers, states_mapping)
+    _create_init_module(fsm_dir, INIT_FSM_TEMPLATE_PATH)
+    _create_handlers_common_module(handlers_dir)
+    _create_handlers_registration_module(handlers_dir)
+    _create_init_module(handlers_dir, INIT_HANDLERS_TEMPLATE_PATH)

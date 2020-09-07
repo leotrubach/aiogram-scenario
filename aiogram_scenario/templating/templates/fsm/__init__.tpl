@@ -1,2 +1,2 @@
 from .states_group import StatesGroup
-from .initialize import initialize
+from .initialize import initialize_fsm
