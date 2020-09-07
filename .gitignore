@@ -24,3 +24,6 @@ venv.bak/
 .venv
 .idea
 experiment.py
+transitions.dia
+app_old/
+app/
