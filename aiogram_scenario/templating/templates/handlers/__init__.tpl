@@ -1,1 +1,1 @@
-from registration import register_handlers
+from .registration import register_handlers

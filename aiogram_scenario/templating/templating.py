@@ -14,10 +14,10 @@ INITIAL_STATE_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "initial_state.tpl"
 STATE_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "state.tpl"
 INIT_STATES_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "__init__.tpl"
 STATES_GROUP_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "states_group.tpl"
-FSM_INITIALIZE_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "initialize.tpl"
+INITIALIZE_FSM_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "initialize.tpl"
 INIT_FSM_TEMPLATE_PATH = TEMPLATES_FSM_DIR / "__init__.tpl"
-HANDLERS_COMMON_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "common.tpl"
-HANDLERS_REGISTRATION_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "registration.tpl"
+COMMON_HANDLERS_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "common.tpl"
+REGISTRATION_HANDLERS_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "registration.tpl"
 INIT_HANDLERS_TEMPLATE_PATH = TEMPLATES_HANDLERS_DIR / "__init__.tpl"
 
 
@@ -67,52 +67,57 @@ def _create_fsm_folders(app_dir: Path,
                                   "If you want to create a new - first delete the old!")
 
 
-def _create_state_module(path: Path, state: str, handlers: List[str], template_path: Path):
+def _create_module(path: Path, content: str):
 
-    state_path = path / _get_module_name_by_state_name(state)
+    with open(str(path), "w") as file:
+        file.write(content)
+
+
+def _get_template_content(template_path: Path) -> str:
 
     with open(str(template_path)) as file:
         template_content = file.read()
+
+    return template_content
+
+
+def _create_state_module(path: Path, state: str, handlers: List[str], template_path: Path):
+
+    template_content = _get_template_content(template_path)
 
     rendered_template = template_content.format(
         handlers="\n\n\n".join(["""async def {name}(event, fsm: FSMTrigger):\n    ...""".format(name=name)
                                 for name in handlers]),
         state_name=state
     )
-    with open(str(state_path), "w") as file:
-        file.write(rendered_template)
+
+    state_path = path / _get_module_name_by_state_name(state)
+    _create_module(state_path, rendered_template)
 
 
 def _create_init_module(path: Path, template_path: Path):
 
+    template_content = _get_template_content(template_path)
+
     init_module_path = path / "__init__.py"
-
-    with open(str(template_path)) as file:
-        template_content = file.read()
-
-    with open(str(init_module_path), "w") as file:
-        file.write(template_content)
+    _create_module(init_module_path, template_content)
 
 
 def _create_states_group_module(path: Path, initial_state: str, states: List[str], states_mapping):
 
-    states_group_module_path = path / "states_group.py"
-
-    with open(str(STATES_GROUP_TEMPLATE_PATH)) as file:
-        template_content = file.read()
+    template_content = _get_template_content(STATES_GROUP_TEMPLATE_PATH)
 
     states_imports = "\n".join([f"from .states.{states_mapping[i]} import {i}" for i in states])
     states_defining = "\n    ".join(
         [f"{states_mapping[i].upper()} = {i}({'is_initial=True' if initial_state == i else ''})" for i in states]
     )
-
     rendered_template = template_content.format(
         states_imports=states_imports,
         states_defining=states_defining
     )
 
-    with open(str(states_group_module_path), "w") as file:
-        file.write(rendered_template)
+    states_group_module_path = path / "states_group.py"
+    _create_module(states_group_module_path, rendered_template)
 
 
 def _create_initialize_module(path: Path,
@@ -120,10 +125,7 @@ def _create_initialize_module(path: Path,
                               states_handlers: Dict[str, List[str]],
                               states_mapping: Dict[str, str]):
 
-    initialize_module_path = path / "initialize.py"
-
-    with open(str(FSM_INITIALIZE_TEMPLATE_PATH)) as file:
-        template_content = file.read()
+    template_content = _get_template_content(INITIALIZE_FSM_TEMPLATE_PATH)
 
     handlers_rows = []
     for state, handlers in states_handlers.items():
@@ -132,7 +134,6 @@ def _create_initialize_module(path: Path,
             handlers_rows.append(f"{states_mapping[state]}.{handler},")
         if state != list(states_handlers.keys())[-1]:
             handlers_rows.append("")
-
     rendered_template = template_content.format(
         states_modules_imports="from .states import (\n    " + ",\n    ".join(
             [states_mapping[i] for i in states_handlers.keys()]
@@ -141,30 +142,37 @@ def _create_initialize_module(path: Path,
         handlers="\n            ".join(handlers_rows)
     )
 
-    with open(str(initialize_module_path), "w") as file:
-        file.write(rendered_template)
+    initialize_module_path = path / "initialize.py"
+    _create_module(initialize_module_path, rendered_template)
 
 
 def _create_handlers_common_module(path: Path):
 
+    template_content = _get_template_content(COMMON_HANDLERS_TEMPLATE_PATH)
+
     common_module_path = path / "common.py"
-
-    with open(str(HANDLERS_COMMON_TEMPLATE_PATH)) as file:
-        template_content = file.read()
-
-    with open(str(common_module_path), "w") as file:
-        file.write(template_content)
+    _create_module(common_module_path, template_content)
 
 
 def _create_handlers_registration_module(path: Path):
 
+    template_content = _get_template_content(REGISTRATION_HANDLERS_TEMPLATE_PATH)
+
     registration_module_path = path / "registration.py"
+    _create_module(registration_module_path, template_content)
 
-    with open(str(HANDLERS_REGISTRATION_TEMPLATE_PATH)) as file:
-        template_content = file.read()
 
-    with open(str(registration_module_path), "w") as file:
-        file.write(template_content)
+def _get_states(transitions):
+
+    states = []
+    for source_state in transitions.keys():
+        if source_state not in states:
+            states.append(source_state)
+        for destination_state in transitions[source_state].values():
+            if destination_state not in states:
+                states.append(destination_state)
+
+    return states
 
 
 def create_fsm_structure(storage: AbstractTransitionsStorage,
@@ -183,15 +191,9 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
 
     _create_fsm_folders(app_dir, fsm_dir, fsm_states_dir, handlers_dir, rewrite)
 
-    states = []
-    for source_state in transitions.keys():
-        if source_state not in states:
-            states.append(source_state)
-        for destination_state in transitions[source_state].values():
-            if destination_state not in states:
-                states.append(destination_state)
-
+    states = _get_states(transitions)
     states_mapping = {state: _get_module_name_by_state_name(state, name_only=True) for state in states}
+    states_handlers = {state: list(transitions[state].keys()) for state in transitions.keys()}
 
     for state in states:
         if state == initial_state:
@@ -201,7 +203,6 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
         _create_state_module(fsm_states_dir, state, list(transitions[state].keys()), template_path)
     _create_init_module(fsm_states_dir, INIT_STATES_TEMPLATE_PATH)
     _create_states_group_module(fsm_dir, initial_state, states, states_mapping)
-    states_handlers = {state: list(transitions[state].keys()) for state in transitions.keys()}
     _create_initialize_module(fsm_dir, initial_state, states_handlers, states_mapping)
     _create_init_module(fsm_dir, INIT_FSM_TEMPLATE_PATH)
     _create_handlers_common_module(handlers_dir)
