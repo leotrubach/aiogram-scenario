@@ -10,6 +10,7 @@ TEMPLATES_FSM_DIR = TEMPLATES_DIR / "fsm"
 TEMPLATES_FSM_STATES_DIR = TEMPLATES_FSM_DIR / "states"
 TEMPLATES_HANDLERS_DIR = TEMPLATES_DIR / "handlers"
 
+INIT_APP_TEMPLATE_PATH = TEMPLATES_DIR / "__init__.tpl"
 INITIAL_STATE_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "initial_state.tpl"
 STATE_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "state.tpl"
 INIT_STATES_TEMPLATE_PATH = TEMPLATES_FSM_STATES_DIR / "__init__.tpl"
@@ -195,6 +196,7 @@ def create_fsm_structure(storage: AbstractTransitionsStorage,
     states_mapping = {state: _get_module_name_by_state_name(state, name_only=True) for state in states}
     states_handlers = {state: list(transitions[state].keys()) for state in transitions.keys()}
 
+    _create_init_module(app_dir, INIT_APP_TEMPLATE_PATH)
     for state in states:
         if state == initial_state:
             template_path = INITIAL_STATE_TEMPLATE_PATH
