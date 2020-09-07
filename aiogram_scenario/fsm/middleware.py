@@ -1,10 +1,7 @@
 from aiogram.dispatcher.middlewares import BaseMiddleware
-from aiogram.dispatcher.handler import current_handler, ctx_data
-from aiogram.types import User, Chat
 
 from .fsm import FiniteStateMachine
 from .trigger import FSMTrigger
-from aiogram_scenario import helpers
 
 
 class FSMMiddleware(BaseMiddleware):
@@ -13,6 +10,7 @@ class FSMMiddleware(BaseMiddleware):
 
         super().__init__()
         self._fsm = fsm
+        self._trigger = FSMTrigger(self._fsm)
         self._trigger_arg = trigger_arg
 
     async def on_process(self, _, data: dict):
@@ -43,17 +41,4 @@ class FSMMiddleware(BaseMiddleware):
 
     def _setup_trigger(self, data: dict) -> None:
 
-        user = User.get_current()
-        chat = Chat.get_current()
-
-        user_id = user.id if user is not None else None
-        chat_id = chat.id if chat is not None else None
-
-        data[self._trigger_arg] = FSMTrigger(
-            fsm=self._fsm,
-            trigger_func=current_handler.get(),
-            event=helpers.get_current_event(),
-            context_kwargs=ctx_data.get(),
-            user_id=user_id,
-            chat_id=chat_id
-        )
+        data[self._trigger_arg] = self._trigger
