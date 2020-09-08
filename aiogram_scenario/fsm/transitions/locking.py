@@ -21,6 +21,8 @@ class TransitionLock:
 
 class TransitionLockContext:
 
+    __slots__ = ("_storage", "_source_state", "_destination_state", "_user_id", "_chat_id", "_lock")
+
     def __init__(self, storage: "TransitionsLocksStorage",
                  source_state: AbstractState,
                  destination_state: AbstractState,
@@ -49,6 +51,8 @@ class TransitionLockContext:
 
 
 class TransitionsLocksStorage:
+
+    __slots__ = ("_locks",)
 
     def __init__(self):
 

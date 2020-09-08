@@ -51,6 +51,8 @@ def get_current_event() -> EVENT_UNION_TYPE:
 
 class FSMTrigger:
 
+    __slots__ = ("_fsm",)
+
     def __init__(self, fsm: FiniteStateMachine):
 
         self._fsm = fsm

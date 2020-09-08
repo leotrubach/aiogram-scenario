@@ -4,6 +4,8 @@ from typing import Optional
 
 class AbstractState(ABC):
 
+    __slots__ = ("name", "_is_initial")
+
     def __init__(self, is_initial: bool = False):
 
         self.name = self.__class__.__name__

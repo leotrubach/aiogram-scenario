@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 class Magazine:
 
+    __slots__ = ("_storage", "_user_id", "_chat_id", "_states")
+
     def __init__(self, storage: "BaseStorage", *,
                  user_id: Optional[int] = None,
                  chat_id: Optional[int] = None):
