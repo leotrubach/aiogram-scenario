@@ -74,7 +74,7 @@ class TransitionsLocksStorage:
 
         is_locked = self._check_locking(user_id=user_id, chat_id=chat_id)
         if is_locked:
-            raise exceptions.TransitionLockingError(
+            raise exceptions.transition.TransitionLockingError(
                 source_state=source_state,
                 destination_state=destination_state,
                 user_id=user_id,
@@ -90,7 +90,7 @@ class TransitionsLocksStorage:
             is_active=True
         )
 
-        logger.debug(f"Lock is set for ({user_id=}, {chat_id=})")
+        logger.debug(f"Lock is set for ({user_id=}, {chat_id=})!")
 
         return lock
 
@@ -102,7 +102,7 @@ class TransitionsLocksStorage:
         self._unset_lock(user_id=lock.user_id, chat_id=lock.chat_id)
         lock.is_active = False
 
-        logger.debug(f"Lock is unset for (user_id={lock.user_id}, chat_id={lock.chat_id})")
+        logger.debug(f"Lock is unset for (user_id={lock.user_id}, chat_id={lock.chat_id})!")
 
     @staticmethod
     def _resolve_address(*, user_id: Optional[int], chat_id: Optional[int]) -> Tuple[int, int]:

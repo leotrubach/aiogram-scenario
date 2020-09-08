@@ -26,7 +26,7 @@ class Magazine:
 
     def __str__(self):
 
-        class_part = f"{self.__class__.__name__}"
+        class_part = self.__class__.__name__
         try:
             return f"<{class_part} {self.states}>"
         except exceptions.MagazineIsNotLoadedError:
@@ -39,7 +39,7 @@ class Magazine:
         self._states = await self._storage.get_magazine_states(chat=self._chat_id, user=self._user_id)
 
         logger.debug(f"States loaded into the magazine: {self._states}, "
-                     f"(user_id={self._user_id}, chat_id={self._chat_id})")
+                     f"(user_id={self._user_id}, chat_id={self._chat_id})!")
 
     def set(self, state: Optional[str]) -> None:
 
@@ -50,13 +50,13 @@ class Magazine:
         else:  # exists on the magazine
             del self._states[state_index + 1:]
 
-        logger.debug(f"Magazine set state: '{state}' (user_id={self._user_id}, chat_id={self._chat_id})")
+        logger.debug(f"Magazine set state: '{state}' (user_id={self._user_id}, chat_id={self._chat_id})!")
 
     async def commit(self) -> None:
 
         await self._storage.set_magazine_states(chat=self._chat_id, user=self._user_id, states=self._states)
         logger.debug(f"Magazine has committed states {self._states} to storage "
-                     f"(user_id={self._user_id}, chat_id={self._chat_id})")
+                     f"(user_id={self._user_id}, chat_id={self._chat_id})!")
 
     async def push(self, state: Optional[str]) -> None:
 

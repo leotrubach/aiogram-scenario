@@ -74,7 +74,7 @@ class TransitionsKeeper:
             self._states.add(state)
 
         logger.debug(f"Added transition from '{source_state}' "
-                     f"('{trigger_func.__qualname__}') to '{destination_state}'")
+                     f"('{trigger_func.__qualname__}') to '{destination_state}'!")
 
     def remove_transition(self, source_state: AbstractState,
                           trigger_func: Callable,
@@ -95,3 +95,6 @@ class TransitionsKeeper:
         for state in (source_state, destination_state):
             if state not in states:
                 self._states.remove(state)
+
+        logger.debug(f"Removed transition from '{source_state}' "
+                     f"('{trigger_func.__qualname__}') to '{destination_state}'!")

@@ -60,8 +60,8 @@ class FSMTrigger:
         user_id = get_current_user_id()
         chat_id = get_current_chat_id()
 
-        logger.debug("FSM received a request to move to next state for "
-                     f"'{user_id=}' in '{chat_id=}'")
+        logger.debug("FSM received a request to move to next state "
+                     f"({user_id=}, {chat_id=})...")
 
         await self._fsm.execute_next_transition(
             trigger_func=current_handler.get(),
@@ -76,8 +76,8 @@ class FSMTrigger:
         user_id = get_current_user_id()
         chat_id = get_current_chat_id()
 
-        logger.debug("FSM received a request to move to previous state for "
-                     f"'{user_id=}' in '{chat_id=}'")
+        logger.debug("FSM received a request to move to previous state "
+                     f"({user_id=}, {chat_id=})...")
 
         await self._fsm.execute_back_transition(
             event=get_current_event(),

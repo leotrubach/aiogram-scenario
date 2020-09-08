@@ -50,7 +50,7 @@ class FiniteStateMachine:
 
         self._initial_state = state
 
-        logger.debug(f"Added initial state for FSM: '{self._initial_state}'")
+        logger.debug(f"Added initial state for FSM: '{self._initial_state}'!")
 
     def add_transition(self, source_state: AbstractState,
                        trigger_func: Callable,
@@ -71,7 +71,6 @@ class FiniteStateMachine:
                           trigger_func: Callable,
                           destination_state: AbstractState) -> None:
 
-        # TODO: Add validation checks
         self._transitions_keeper.remove_transition(source_state, trigger_func, destination_state)
 
     def add_transitions(self, source_states: Collection[AbstractState],
@@ -98,19 +97,19 @@ class FiniteStateMachine:
 
         with self._locks_storage.acquire(source_state, destination_state, user_id=user_id, chat_id=chat_id):
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
-                         f"for '{user_id=}' in '{chat_id=}'...")
+                         f"({user_id=}, {chat_id=})...")
 
             exit_kwargs, enter_kwargs = [helpers.get_existing_kwargs(method, check_varkw=True, **context_kwargs)
                                          for method in (source_state.process_exit, destination_state.process_enter)]
 
             await source_state.process_exit(event, **exit_kwargs)
-            logger.debug(f"Produced exit from state '{source_state}' for '{user_id=}' in '{chat_id=}'")
+            logger.debug(f"Produced exit from state '{source_state}' ({user_id=}, {chat_id=})!")
             await destination_state.process_enter(event, **enter_kwargs)
-            logger.debug(f"Produced enter to state '{destination_state}' for '{user_id=}' in '{chat_id=}'")
+            logger.debug(f"Produced enter to state '{destination_state}' ({user_id=}, {chat_id=})!")
             await magazine.push(destination_state.raw_value)
-            logger.debug(f"State '{destination_state}' is set for '{user_id=}' in '{chat_id=}'")
+            logger.debug(f"State '{destination_state}' is set ({user_id=}, {chat_id=})!")
 
-        logger.debug(f"Transition to '{destination_state}' for '{user_id=}' in '{chat_id=}' completed!")
+        logger.debug(f"Transition to '{destination_state}' ({user_id=}, {chat_id=}) completed!")
 
     def import_transitions(self, storage: AbstractTransitionsStorage, *,
                            states: Collection[AbstractState],
@@ -155,7 +154,8 @@ class FiniteStateMachine:
         try:
             destination_state = self._transitions_keeper[source_state][trigger_func]
         except KeyError:
-            raise exceptions.transition.TransitionError(f"no next transition are defined for '{source_state}' state!")
+            raise exceptions.transition.TransitionError(f"no next transition are defined for '{source_state}' state "
+                                                        f"({user_id=}, {chat_id=})!")
 
         await self.execute_transition(
             source_state=source_state,
@@ -207,11 +207,12 @@ class FiniteStateMachine:
                 destination_state = states[i + 1]
                 if destination_state not in self._transitions_keeper[source_state].values():
                     raise exceptions.fsm.TransitionsChronologyError(f"from '{source_state}' state it is impossible "
-                                                                    f"to get into '{destination_state}' state!")
+                                                                    f"to get into '{destination_state}' state "
+                                                                    f"({user_id=}, {chat_id=})!")
 
         magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         for state in states:
             magazine.set(state.raw_value)
         await magazine.commit()
 
-        logger.debug(f"Chronology of transitions set for ({user_id=}, {chat_id=})")
+        logger.debug(f"Chronology of transitions '{magazine.states}' set ({user_id=}, {chat_id=})!")
