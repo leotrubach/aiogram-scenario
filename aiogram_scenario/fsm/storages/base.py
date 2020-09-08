@@ -29,7 +29,7 @@ class Magazine:
         class_part = self.__class__.__name__
         try:
             return f"<{class_part} {self.states}>"
-        except exceptions.MagazineIsNotLoadedError:
+        except exceptions.magazine.MagazineIsNotLoadedError:
             return f"<{class_part} NOT LOADED!>"
 
     __repr__ = __str__
@@ -74,7 +74,7 @@ class Magazine:
     def states(self) -> List[Optional[str]]:
 
         if not self.is_loaded:
-            raise exceptions.MagazineIsNotLoadedError("states were not loaded!")
+            raise exceptions.magazine.MagazineIsNotLoadedError("states were not loaded!")
 
         return self._states
 
@@ -89,8 +89,8 @@ class Magazine:
         try:
             return self.states[-2]
         except IndexError:
-            raise exceptions.StateNotFoundError(f"no penultimate state for (user_id={self._user_id}, "
-                                                f"chat_id={self._chat_id})!")
+            raise exceptions.state.StateNotFoundError(f"no penultimate state for (user_id={self._user_id}, "
+                                                      f"chat_id={self._chat_id})!")
 
 
 class BaseStorage(aiogram.dispatcher.storage.BaseStorage, ABC):
