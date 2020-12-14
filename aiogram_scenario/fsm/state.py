@@ -4,10 +4,12 @@ from typing import Optional
 
 class AbstractState(ABC):
 
+    __slots__ = ("name", "_is_initial")
+
     def __init__(self, is_initial: bool = False):
 
         self.name = self.__class__.__name__
-        self.is_initial = is_initial
+        self._is_initial = is_initial
 
     def __str__(self):
 
@@ -18,6 +20,10 @@ class AbstractState(ABC):
     def __eq__(self, other):
 
         return self.name == other
+
+    def __hash__(self):
+
+        return hash(self.name)
 
     async def process_enter(self, *args, **kwargs) -> None:
 
@@ -32,10 +38,15 @@ class AbstractState(ABC):
 
         pass
 
+    @property
+    def is_initial(self) -> bool:
 
-def get_state_value(state: AbstractState) -> Optional[str]:
+        return self._is_initial
 
-    if state.is_initial:
-        return None
-    else:
-        return str(state)
+    @property
+    def raw_value(self) -> Optional[str]:
+
+        if self._is_initial:
+            return None
+        else:
+            return str(self)

@@ -1,0 +1,1 @@
+recursive-include aiogram_scenario/templating/templates *.tpl

@@ -1,14 +1,14 @@
-from typing import Optional, Collection
+from typing import Optional, Collection, List
 
 from .state import AbstractState
 
 
-class StatesGroup:
+class BaseStatesGroup:
 
     @classmethod
-    def get_states(cls, exclude: Optional[Collection[AbstractState]] = None):
+    def select(cls, *, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
 
-        cls_values = cls.__dict__.values()
+        cls_values = vars(cls).values()
 
         if exclude is None:
             states = [i for i in cls_values if isinstance(i, AbstractState)]

@@ -1,29 +1,10 @@
 from typing import Optional
 
+from .base import ScenarioError
 from aiogram_scenario.fsm.state import AbstractState
 
 
-class StateError(Exception):
-
-    pass
-
-
-class InitialStateError(StateError):
-
-    pass
-
-
-class StateNotFoundError(Exception):
-
-    pass
-
-
-class DuplicateError(Exception):
-
-    pass
-
-
-class TransitionError(Exception):
+class TransitionError(ScenarioError):
 
     pass
 
@@ -45,18 +26,3 @@ class TransitionLockingError(TransitionError):
         return f"transition from '{self.source_state}' to '{self.destination_state}' " \
                f"for (user_id={self.user_id}, chat_id={self.chat_id}) is not possible " \
                f"because there is an active lock!"
-
-
-class MagazineError(Exception):
-
-    pass
-
-
-class MagazineInitializationError(MagazineError):
-
-    pass
-
-
-class MagazineIsNotLoadedError(MagazineError):
-
-    pass
