@@ -1,0 +1,27 @@
+from aiogram_scenario import BaseState, FSMTrigger, HandlersRegistrar
+from aiogram.types import ...  {{ '# select event types for events annotations' }}
+
+
+{% for handler_name in handlers_names -%}
+async def {{ handler_name }}(event, **kwargs) -> None:
+    ...  {{ '# define the handler logic here' }}
+
+
+{% else -%}
+...  {{ '# here you can define handlers for this state' }}
+
+
+{% endfor -%}
+
+
+class {{ state_name }}(BaseState):
+{% if not is_initial %}
+    async def process_enter(self, event, **kwargs) -> None:
+        ...  {{ '# define here logic for entering this state (also you can remove the method)' }}
+{% endif %}
+    async def process_exit(self, event, **kwargs) -> None:
+        ...  {{ '# define here logic for exiting this state (also you can remove the method)' }}
+
+    def register_handlers(self, registrar: HandlersRegistrar, data: dict) -> None:
+        ...  {{ '# register handlers for this state here with the registrar' }}
+

@@ -1,18 +1,14 @@
-from typing import Optional, Collection, List
+from typing import Collection, List
 
-from .state import AbstractState
+from .state import BaseState
 
 
 class BaseStatesGroup:
 
     @classmethod
-    def select(cls, *, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
+    def select(cls, *, exclude: Collection[BaseState] = ()) -> List[BaseState]:
 
         cls_values = vars(cls).values()
-
-        if exclude is None:
-            states = [i for i in cls_values if isinstance(i, AbstractState)]
-        else:
-            states = [i for i in cls_values if isinstance(i, AbstractState) and (i not in exclude)]
+        states = [i for i in cls_values if isinstance(i, BaseState) and (i not in exclude)]
 
         return states

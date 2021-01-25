@@ -1,0 +1,11 @@
+from aiogram_scenario import BaseStatesGroup
+
+{% for state_name, module_name in states_modules.items() -%}
+from .states.{{ module_name }} import {{ state_name }}
+{% endfor %}
+
+class StatesGroup(BaseStatesGroup):
+{% for state_name, module_name in states_modules.items() %}
+    {{ module_name }} = {{ state_name }}()
+{%- endfor %}
+

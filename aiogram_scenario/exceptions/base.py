@@ -1,5 +1,0 @@
-
-
-class ScenarioError(Exception):
-
-    pass

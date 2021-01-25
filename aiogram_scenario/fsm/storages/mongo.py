@@ -3,7 +3,7 @@ from typing import Union, List, Optional, AnyStr
 from aiogram.contrib.fsm_storage import mongo
 from aiogram.contrib.fsm_storage.mongo import DATA, BUCKET
 
-from aiogram_scenario.fsm.storages.base import BaseStorage
+from .base import BaseStorage
 
 
 MAGAZINE = "aiogram_magazine"
@@ -18,6 +18,7 @@ class MongoStorage(BaseStorage, mongo.MongoStorage):
 
         chat, user = self.check_address(chat=chat, user=user)
         magazine = self.get_magazine(user=user, chat=chat)
+        await magazine.load()
         await magazine.push(state)
 
     async def get_state(self, *, chat: Union[str, int, None] = None,
@@ -27,19 +28,20 @@ class MongoStorage(BaseStorage, mongo.MongoStorage):
         chat, user = self.check_address(chat=chat, user=user)
         magazine = self.get_magazine(user=user, chat=chat)
         await magazine.load()
+
         return magazine.current_state
 
-    async def set_magazine_states(self, *, chat: Union[str, int, None] = None,
-                                  user: Union[str, int, None] = None,
-                                  states: List[Optional[str]]) -> None:
+    async def set_magazine_states(self, *, chat: Optional[int] = None,
+                                  user: Optional[int] = None,
+                                  states: List[Union[None, str]]) -> None:
 
         chat, user = self.check_address(chat=chat, user=user)
         db = await self.get_db()
         await db[MAGAZINE].update_one(filter={'chat': chat, 'user': user},
                                       update={'$set': {'magazine': states}}, upsert=True)
 
-    async def get_magazine_states(self, *, chat: Union[str, int, None] = None,
-                                  user: Union[str, int, None] = None) -> List[Optional[str]]:
+    async def get_magazine_states(self, *, chat: Optional[int] = None,
+                                  user: Optional[int] = None) -> List[Optional[str]]:
 
         chat, user = self.check_address(chat=chat, user=user)
         db = await self.get_db()

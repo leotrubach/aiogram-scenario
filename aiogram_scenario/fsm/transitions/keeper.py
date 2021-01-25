@@ -1,28 +1,14 @@
 from typing import Dict, Callable, Set
-import logging
 
-from aiogram_scenario.fsm.state import AbstractState
+from aiogram_scenario.fsm.state import BaseState
 from aiogram_scenario import exceptions
-
-
-logger = logging.getLogger(__name__)
-
-
-def _check_equivalent_states(source_state: AbstractState, destination_state: AbstractState) -> None:
-
-    if source_state == destination_state:
-        raise exceptions.fsm.TransitionAddingError(
-            f"source state '{source_state}' is the same as destination state!"
-        )
 
 
 class TransitionsKeeper:
 
     def __init__(self):
 
-        self._transitions: Dict[AbstractState, Dict[Callable, AbstractState]] = {}
-        self._states: Set[AbstractState] = set()
-        self._source_states: Set[AbstractState] = set()
+        self._transitions: Dict[BaseState, Dict[Callable, BaseState]] = {}
 
     def __getitem__(self, item):
 
@@ -32,69 +18,51 @@ class TransitionsKeeper:
 
         self._transitions[key] = value
 
-    @property
-    def serialized_transitions(self) -> Dict[str, Dict[str, str]]:
+    def __iter__(self):
 
-        return {
-            str(source_state): {
-                trigger_func.__name__: str(destination_state)
-                for trigger_func, destination_state in self._transitions[source_state].items()
-            }
-            for source_state in self._transitions.keys()
-        }
+        return iter(self._transitions)
 
-    @property
-    def source_states(self) -> Set[AbstractState]:
+    def get_states(self) -> Set[BaseState]:
 
-        return self._source_states
+        states_ = set()
+        for source_state in self._transitions:
+            states_.add(source_state)
+            for destination_state in self._transitions[source_state].values():
+                states_.add(destination_state)
 
-    @property
-    def states(self) -> Set[AbstractState]:
+        return states_
 
-        return self._states
+    def add(self, source_state: BaseState, trigger: Callable, destination_state: BaseState) -> None:
 
-    def add_transition(self, source_state: AbstractState,
-                       trigger_func: Callable,
-                       destination_state: AbstractState) -> None:
+        if source_state == destination_state:
+            raise exceptions.TransitionAddingError(
+                f"source state '{source_state}' is the same as destination state!"
+            )
 
-        _check_equivalent_states(source_state, destination_state)
-
-        if source_state not in self._source_states:
-            self._transitions[source_state] = {trigger_func: destination_state}
-        elif self._transitions[source_state].get(trigger_func) is not None:
-            raise exceptions.fsm.TransitionAddingError(
-                f"transition for trigger func '{trigger_func.__qualname__}' is "
+        if source_state not in self._transitions:
+            self._transitions[source_state] = {trigger: destination_state}
+        elif self._transitions[source_state].get(trigger) is not None:
+            raise exceptions.TransitionAddingError(
+                f"transition for trigger func '{trigger.__qualname__}' is "
                 f"already defined in '{source_state}' state!"
             )
         else:
-            self._transitions[source_state][trigger_func] = destination_state
+            self._transitions[source_state][trigger] = destination_state
 
-        self._source_states.add(source_state)
-        for state in (source_state, destination_state):
-            self._states.add(state)
+    def remove(self, source_state: BaseState, trigger: Callable, destination_state: BaseState) -> None:
 
-        logger.debug(f"Added transition from '{source_state}' "
-                     f"('{trigger_func.__qualname__}') to '{destination_state}'!")
+        if source_state == destination_state:
+            raise exceptions.TransitionRemovingError(
+                f"source state '{source_state}' is the same as destination state!"
+            )
 
-    def remove_transition(self, source_state: AbstractState,
-                          trigger_func: Callable,
-                          destination_state: AbstractState) -> None:
-
-        _check_equivalent_states(source_state, destination_state)
-
-        del self._transitions[source_state][trigger_func]
-        if not self._transitions[source_state]:
-            del self._transitions[source_state]
-            self._source_states.remove(source_state)
-
-        states = list(self._transitions.keys())
-        for i in self._transitions.values():
-            states.extend(i.values())
-        states = set(states)
-
-        for state in (source_state, destination_state):
-            if state not in states:
-                self._states.remove(state)
-
-        logger.debug(f"Removed transition from '{source_state}' "
-                     f"('{trigger_func.__qualname__}') to '{destination_state}'!")
+        try:
+            if len(self._transitions[source_state]) > 1:
+                del self._transitions[source_state][trigger]
+            else:
+                del self._transitions[source_state]
+        except KeyError:
+            raise exceptions.TransitionRemovingError(
+                f"Transition ({source_state=}, trigger_func={trigger.__qualname__}, "
+                f"{destination_state=}) not found for removing!"
+            )

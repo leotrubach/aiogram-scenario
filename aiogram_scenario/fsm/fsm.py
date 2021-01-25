@@ -1,218 +1,214 @@
-from typing import Optional, List, Callable, Collection, Dict, Set
+from typing import Optional, Union, List, Callable, Collection, Dict
 import logging
 
-from .state import AbstractState
+from .state import BaseState
+from .storages.base import BaseStorage, Magazine
+from .transitions.keeper import TransitionsKeeper
+from .transitions.adapters import AbstractTransitionsAdapter
+from .transitions.locking.storages import AbstractLocksStorage, MemoryLocksStorage
 from aiogram_scenario import exceptions, helpers
-from aiogram_scenario.helpers import EVENT_UNION_TYPE
-from aiogram_scenario.fsm.storages.base import BaseStorage, Magazine
-from aiogram_scenario.fsm.transitions.locking import TransitionsLocksStorage
-from aiogram_scenario.transitions_storages.base import AbstractTransitionsStorage
-from aiogram_scenario.fsm.transitions.keeper import TransitionsKeeper
+from aiogram_scenario.helpers import EventUnionType
 
 
 logger = logging.getLogger(__name__)
 
 
-class FiniteStateMachine:
+class FSM:
 
-    def __init__(self, storage: BaseStorage, *, initial_state: Optional[AbstractState] = None):
+    def __init__(self, storage: BaseStorage, *, locks_storage: Optional[AbstractLocksStorage] = None,
+                 initial_state: Optional[BaseState] = None):
 
         if not isinstance(storage, BaseStorage):
-            raise exceptions.fsm.InvalidFSMStorage("invalid storage type! Try to choose from the ones "
-                                                   "suggested here: aiogram_scenario.fsm.storages")
+            raise exceptions.InvalidFSMStorageError(type(storage).__name__)
 
         self._storage = storage
-        self._initial_state = initial_state
-        self._locks_storage = TransitionsLocksStorage()
+
+        self._initial_state: Optional[BaseState] = None
+        if initial_state is not None:
+            self.set_initial_state(initial_state)
+
+        if locks_storage is None:
+            locks_storage = MemoryLocksStorage()
+        self._locks_storage = locks_storage
+
         self._transitions_keeper = TransitionsKeeper()
-        self._states_mapping: Dict[Optional[str], AbstractState] = {}
+        self._states_mapping: Dict[Union[None, str], BaseState] = {}
 
-    @property
-    def initial_state(self) -> AbstractState:
-
-        if self._initial_state is None:
-            raise exceptions.state.InitialStateError("initial state not set!")
-
-        return self._initial_state
-
-    @property
-    def states(self) -> Set[AbstractState]:
-
-        return self._transitions_keeper.states
-
-    def set_initial_state(self, state: AbstractState) -> None:
+    def __del__(self):
 
         if self._initial_state is not None:
-            raise exceptions.state.InitialStateError("initial state has already been set before!")
-        elif not state.is_initial:
-            raise exceptions.state.InitialStateError(f"state '{state}' not indicated "
-                                                     f"as initial ({state.is_initial=})!")
+            self.unset_initial_state()
 
+        for source_state in self._transitions_keeper:
+            for trigger, destination_state in self._transitions_keeper[source_state]:
+                self.remove_transition(source_state, trigger, destination_state)
+
+    def set_initial_state(self, state: BaseState) -> None:
+
+        if self._initial_state is not None:
+            raise exceptions.InitialStateSettingError("initial state has already been set before!")
+        elif state.fsm is not None:
+            raise exceptions.InitialStateSettingError(f"state '{state}' is used in another FSM!")
+
+        state.value = None  # taken from aiogram
+        state.is_initial = True
         self._initial_state = state
+        self._initial_state.fsm = self
 
-        logger.debug(f"Added initial state for FSM: '{self._initial_state}'!")
+        logger.info(f"Initial state ({self._initial_state}) is set!")
 
-    def add_transition(self, source_state: AbstractState,
-                       trigger_func: Callable,
-                       destination_state: AbstractState) -> None:
+    def unset_initial_state(self) -> None:
+
+        if self._initial_state is None:
+            raise exceptions.InitialStateUnsettingError("the initial state has not been set!")
+
+        self._initial_state.value = self._initial_state.name
+        self._initial_state.fsm = None
+
+        logger.info("Initial state is unset!")
+
+    def add_transition(self, source_state: BaseState, trigger: Callable,
+                       destination_state: BaseState) -> None:
 
         for state in (source_state, destination_state):
-            if state.is_initial and (state is not self.initial_state):
-                raise exceptions.fsm.TransitionAddingError(
-                    f"source state '{source_state}' is defined as initial state, but it is different "
-                    f"from the set initial state of the machine ('{self.initial_state}')!"
-                )
-            if self._states_mapping.get(state.raw_value) is None:
-                self._states_mapping[state.raw_value] = state
+            if all(state.fsm is not i for i in (None, self)):
+                raise exceptions.TransitionAddingError(f"state '{state}' is used in another FSM!")
 
-        self._transitions_keeper.add_transition(source_state, trigger_func, destination_state)
+            if state.fsm is None:
+                state.is_initial = False
+                state.fsm = self
 
-    def remove_transition(self, source_state: AbstractState,
-                          trigger_func: Callable,
-                          destination_state: AbstractState) -> None:
+            if self._states_mapping.get(state.value) is None:
+                self._states_mapping[state.value] = state
 
-        self._transitions_keeper.remove_transition(source_state, trigger_func, destination_state)
+        self._transitions_keeper.add(source_state, trigger, destination_state)
 
-    def add_transitions(self, source_states: Collection[AbstractState],
-                        trigger_func: Callable,
-                        destination_state: AbstractState) -> None:
+        logger.info(f"Added transition from '{source_state}' ('{trigger.__qualname__}') to '{destination_state}'!")
 
-        for source_state in source_states:
-            self.add_transition(source_state, trigger_func, destination_state)
+    def remove_transition(self, source_state: BaseState, trigger: Callable,
+                          destination_state: BaseState) -> None:
 
-    async def execute_transition(self, source_state: AbstractState,
-                                 destination_state: AbstractState, *,
-                                 event: EVENT_UNION_TYPE,
-                                 context_kwargs: dict,
-                                 magazine: Optional[Magazine] = None,
-                                 user_id: Optional[int] = None,
-                                 chat_id: Optional[int] = None) -> None:
+        for state in (source_state, destination_state):
+            if state.fsm is not self:
+                raise exceptions.TransitionRemovingError(f"state '{state}' is unused in this FSM!")
 
-        if magazine is not None:
-            if not magazine.is_loaded:
-                raise exceptions.transition.TransitionError("magazine is not loaded!")
-        else:
-            magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
-            await magazine.load()
+        self._transitions_keeper.remove(source_state, trigger, destination_state)
+        states = self._transitions_keeper.get_states()
+        for state in (source_state, destination_state):
+            if (state is not self._initial_state) and (state not in states):
+                state.fsm = None
 
-        with self._locks_storage.acquire(source_state, destination_state, user_id=user_id, chat_id=chat_id):
+        logger.info(f"Removed transition from '{source_state}' ('{trigger.__qualname__}') to '{destination_state}'!")
+
+    async def execute_transition(self, source_state: BaseState, destination_state: BaseState, *,
+                                 event: EventUnionType, context_kwargs: dict, magazine: Magazine) -> None:
+
+        chat_id, user_id = magazine.chat_id, magazine.user_id
+        async with self._locks_storage.acquire(source_state, destination_state,
+                                               chat_id=chat_id, user_id=user_id):
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
-                         f"({user_id=}, {chat_id=})...")
+                         f"({chat_id=}, {user_id=})...")
 
             exit_kwargs, enter_kwargs = [helpers.get_existing_kwargs(method, check_varkw=True, **context_kwargs)
                                          for method in (source_state.process_exit, destination_state.process_enter)]
 
             await source_state.process_exit(event, **exit_kwargs)
-            logger.debug(f"Produced exit from state '{source_state}' ({user_id=}, {chat_id=})!")
+            logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
             await destination_state.process_enter(event, **enter_kwargs)
-            logger.debug(f"Produced enter to state '{destination_state}' ({user_id=}, {chat_id=})!")
-            await magazine.push(destination_state.raw_value)
-            logger.debug(f"State '{destination_state}' is set ({user_id=}, {chat_id=})!")
+            logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
+            await magazine.push(destination_state.value)
+            logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
 
-        logger.debug(f"Transition to '{destination_state}' ({user_id=}, {chat_id=}) completed!")
+        logger.debug(f"Transition to '{destination_state}' ({chat_id=}, {user_id=}) completed!")
 
-    def import_transitions(self, storage: AbstractTransitionsStorage, *,
-                           states: Collection[AbstractState],
-                           triggers_funcs: Collection[Callable]) -> None:
+    def import_transitions(self, adapter: AbstractTransitionsAdapter, *,
+                           states: Collection[BaseState],
+                           triggers: Collection[Callable]) -> None:
 
         if not states:
-            raise exceptions.fsm.ImportTransitionsError("no states!")
-        if not triggers_funcs:
-            raise exceptions.fsm.ImportTransitionsError("no triggers funcs!")
+            raise exceptions.TransitionsImportError("no states!")
+        if not triggers:
+            raise exceptions.TransitionsImportError("no triggers!")
 
-        transitions = storage.read()
+        transitions = adapter.get_transitions()
         states_mapping = {str(state): state for state in states}
-        triggers_funcs_mapping = {trigger.__name__: trigger for trigger in triggers_funcs}
+        triggers_mapping = {trigger.__name__: trigger for trigger in triggers}
 
-        for source_state in transitions.keys():
-            for trigger_func in transitions[source_state].keys():
-                destination_state = transitions[source_state][trigger_func]
+        for source_state in transitions:
+            for trigger, destination_state in transitions[source_state].items():
                 self.add_transition(
                     source_state=states_mapping[source_state],
-                    trigger_func=triggers_funcs_mapping[trigger_func],
+                    trigger=triggers_mapping[trigger],
                     destination_state=states_mapping[destination_state]
                 )
 
-    def export_transitions(self, storage: AbstractTransitionsStorage) -> None:
+        logger.info(f"Transitions from '{adapter.filename}' file successfully imported!")
 
-        serialized_transitions = self._transitions_keeper.serialized_transitions
-        if not serialized_transitions:
-            raise exceptions.fsm.ExportTransitionsError("no transitions for export!")
-
-        storage.write(serialized_transitions)
-
-    async def execute_next_transition(self, trigger_func: Callable, *,
-                                      event: EVENT_UNION_TYPE,
-                                      context_kwargs: dict,
-                                      user_id: Optional[int] = None,
-                                      chat_id: Optional[int] = None) -> None:
+    async def execute_next_transition(self, trigger: Callable, *, event: EventUnionType,
+                                      context_kwargs: dict, chat_id: int, user_id: int) -> None:
 
         magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
 
         source_state = self._states_mapping[magazine.current_state]
         try:
-            destination_state = self._transitions_keeper[source_state][trigger_func]
+            destination_state = self._transitions_keeper[source_state][trigger]
         except KeyError:
-            raise exceptions.transition.TransitionError(f"no next transition are defined for '{source_state}' state "
-                                                        f"({user_id=}, {chat_id=})!")
+            raise exceptions.NextTransitionNotFoundError(
+                source_state=str(source_state),
+                chat_id=chat_id,
+                user_id=user_id
+            )
 
         await self.execute_transition(
             source_state=source_state,
             destination_state=destination_state,
             event=event,
             context_kwargs=context_kwargs,
-            magazine=magazine,
-            user_id=user_id,
-            chat_id=chat_id
+            magazine=magazine
         )
 
-    async def execute_back_transition(self, *, event: EVENT_UNION_TYPE,
-                                      context_kwargs: dict,
-                                      user_id: Optional[int] = None,
-                                      chat_id: Optional[int] = None) -> None:
+    async def execute_back_transition(self, *, event: EventUnionType, context_kwargs: dict,
+                                      chat_id: int, user_id: int) -> None:
 
         magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
 
-        try:
-            penultimate_state = magazine.penultimate_state
-        except exceptions.state.StateNotFoundError:
-            raise exceptions.transition.TransitionError("there are not enough states in the "
-                                                        f"magazine to return ({user_id=}, {chat_id=})!")
-
         source_state = self._states_mapping[magazine.current_state]
-        destination_state = self._states_mapping[penultimate_state]
+        try:
+            destination_state = self._states_mapping[magazine.penultimate_state]
+        except exceptions.StateNotFoundError:
+            raise exceptions.NextTransitionNotFoundError(
+                source_state=magazine.current_state,
+                chat_id=chat_id,
+                user_id=user_id
+            )
 
         await self.execute_transition(
             source_state=source_state,
             destination_state=destination_state,
             event=event,
             context_kwargs=context_kwargs,
-            magazine=magazine,
-            user_id=user_id,
-            chat_id=chat_id
+            magazine=magazine
         )
 
-    async def set_transitions_chronology(self, states: List[AbstractState], *,
-                                         user_id: Optional[int] = None,
-                                         chat_id: Optional[int] = None,
-                                         check: bool = True) -> None:
+    async def set_transitions_chronology(self, states: List[BaseState], *, chat_id: int, user_id: int) -> None:
 
-        if check:
-            for i in range(len(states)):
-                if i == (len(states) - 1):
-                    break
-                source_state = states[i]
-                destination_state = states[i + 1]
-                if destination_state not in self._transitions_keeper[source_state].values():
-                    raise exceptions.fsm.TransitionsChronologyError(f"from '{source_state}' state it is impossible "
-                                                                    f"to get into '{destination_state}' state "
-                                                                    f"({user_id=}, {chat_id=})!")
+        for index, source_state in enumerate(states):
+            try:
+                destination_state = states[index + 1]
+            except IndexError:
+                break
+            if destination_state not in self._transitions_keeper[source_state].values():
+                raise exceptions.TransitionsChronologyError(
+                    source_state=str(source_state),
+                    destination_state=str(destination_state),
+                    states=[str(i) for i in states]
+                )
 
         magazine = self._storage.get_magazine(chat=chat_id, user=user_id)
         for state in states:
-            magazine.set(state.raw_value)
+            magazine.set(state.value)
         await magazine.commit()
 
-        logger.debug(f"Chronology of transitions '{magazine.states}' set ({user_id=}, {chat_id=})!")
+        logger.info(f"Chronology of transitions ({', '.join(magazine.states)}) is set ({chat_id=}, {user_id=})!")

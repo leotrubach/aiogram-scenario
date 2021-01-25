@@ -3,14 +3,9 @@ from pathlib import Path
 import re
 
 
-PROJECT_NAME = "aiogram-scenario"
-PACKAGE_NAME = "aiogram_scenario"
-WORK_DIR = Path(__file__).parent
-
-
 def fetch_version() -> str:
 
-    content = (WORK_DIR / PACKAGE_NAME / "__init__.py").read_text(encoding="UTF-8")
+    content = (Path(__file__).parent / "aiogram_scenario" / "__init__.py").read_text(encoding="UTF-8")
     try:
         version_string = re.findall(r'__version__ = \"\d+\.\d+\.\d+\"', content)[0]
         version = version_string.rsplit(" ", 1)[-1].replace('"', '')
@@ -27,14 +22,14 @@ def fetch_long_description() -> str:
 
 
 setuptools.setup(
-    name=PROJECT_NAME,
+    name="aiogram-scenario",
     version=fetch_version(),
-    packages=setuptools.find_packages(include=(PACKAGE_NAME, "tests")),
+    packages=setuptools.find_packages(exclude=("tests", "docs")),
     url="https://github.com/Abstract-X/aiogram-scenario",
     license="MIT",
     author="Abstract-X",
     author_email="abstract-x-mail@protonmail.com",
-    description="FSM implementation for aiogram (2.x).",
+    description="FSM implementation for Telegram bots based on aiogram.",
     long_description=fetch_long_description(),
     long_description_content_type="text/markdown",
     install_requires=[

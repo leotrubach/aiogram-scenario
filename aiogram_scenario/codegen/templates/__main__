@@ -1,0 +1,31 @@
+from aiogram_scenario.fsm.storages.memory import MemoryStorage  # change storage
+from aiogram_scenario.transitions.adapters import ...  # select adapter type
+from aiogram_scenario import FSM, FSMMiddleware
+from aiogram import Bot, Dispatcher
+
+from {{ app_name }}.fsm.initialize import initialize_fsm
+
+
+async def on_startup(dispatcher: Dispatcher) -> None:
+    pass
+
+
+async def on_shutdown(dispatcher: Dispatcher) -> None:
+    pass
+
+
+def main():
+    bot = Bot(...)  # enter token
+    storage = MemoryStorage()
+    dispatcher = Dispatcher(bot, storage=storage)
+    fsm = FSM(storage)
+    transitions_adapter = ...  # create adapter
+    handlers_registration_data = {}  # enter handlers registration data
+    initialize_fsm(fsm, transitions_adapter, dispatcher, handlers_registration_data)
+
+    ...  # define the logic for starting
+
+
+if __name__ == "__main__":
+    main()
+
