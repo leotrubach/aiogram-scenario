@@ -1,9 +1,10 @@
-from typing import Callable, Collection, List, Set, Optional
+from typing import Callable, Collection, List, Set, Optional, TYPE_CHECKING
 import logging
 
 from aiogram import Dispatcher
 
-from .fsm.state import BaseState
+if TYPE_CHECKING:
+    from .fsm.state import BaseState
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def _log_registration_handler(name: str, handler_type: str) -> None:
 
 class HandlersRegistrar:
 
-    def __init__(self, dispatcher: Dispatcher, state: BaseState):
+    def __init__(self, dispatcher: Dispatcher, state: "BaseState"):
 
         self._dispatcher = dispatcher
         self._state = state
@@ -118,7 +119,7 @@ class CommonHandlersRegistrar:
 
         return handlers
 
-    def register_states_handlers(self, states: Collection[BaseState], data: Optional[dict] = None) -> None:
+    def register_states_handlers(self, states: Collection["BaseState"], data: Optional[dict] = None) -> None:
 
         if data is None:
             data = {}
@@ -127,7 +128,7 @@ class CommonHandlersRegistrar:
             registrar = HandlersRegistrar(self._dispatcher, state=state)
             state.register_handlers(registrar, data)
 
-    def register_message_handler(self, callback: Callable, states: List[BaseState], *custom_filters, commands=None,
+    def register_message_handler(self, callback: Callable, states: List["BaseState"], *custom_filters, commands=None,
                                  regexp=None, content_types=None, run_task=None, **kwargs) -> None:
 
         for state in states:
@@ -135,14 +136,14 @@ class CommonHandlersRegistrar:
             registrar.register_message_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                content_types=content_types, run_task=run_task, **kwargs)
 
-    def register_callback_query_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_callback_query_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                         run_task=None, **kwargs) -> None:
 
         for state in states:
             registrar = HandlersRegistrar(self._dispatcher, state)
             registrar.register_callback_query_handler(callback, *custom_filters, run_task=run_task, **kwargs)
 
-    def register_channel_post_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_channel_post_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                       commands=None, regexp=None, content_types=None, run_task=None, **kwargs) -> None:
 
         for state in states:
@@ -150,14 +151,14 @@ class CommonHandlersRegistrar:
             registrar.register_channel_post_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                     content_types=content_types, run_task=run_task, **kwargs)
 
-    def register_chosen_inline_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_chosen_inline_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                        run_task=None, **kwargs) -> None:
 
         for state in states:
             registrar = HandlersRegistrar(self._dispatcher, state)
             registrar.register_chosen_inline_handler(callback, *custom_filters, run_task=run_task, **kwargs)
 
-    def register_edited_channel_post_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_edited_channel_post_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                              commands=None, regexp=None, content_types=None,
                                              run_task=None, **kwargs) -> None:
 
@@ -167,7 +168,7 @@ class CommonHandlersRegistrar:
                                                            regexp=regexp, content_types=content_types,
                                                            run_task=run_task, **kwargs)
 
-    def register_edited_message_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_edited_message_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                         commands=None, regexp=None, content_types=None,
                                         run_task=None, **kwargs) -> None:
 
@@ -176,21 +177,21 @@ class CommonHandlersRegistrar:
             registrar.register_edited_message_handler(callback, *custom_filters, commands=commands, regexp=regexp,
                                                       content_types=content_types, run_task=run_task, **kwargs)
 
-    def register_inline_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_inline_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                 run_task=None, **kwargs) -> None:
 
         for state in states:
             registrar = HandlersRegistrar(self._dispatcher, state)
             registrar.register_inline_handler(callback, *custom_filters, run_task=run_task, **kwargs)
 
-    def register_pre_checkout_query_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_pre_checkout_query_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                             run_task=None, **kwargs) -> None:
 
         for state in states:
             registrar = HandlersRegistrar(self._dispatcher, state)
             registrar.register_pre_checkout_query_handler(callback, *custom_filters, run_task=run_task, **kwargs)
 
-    def register_shipping_query_handler(self, callback: Callable, states: List[BaseState], *custom_filters,
+    def register_shipping_query_handler(self, callback: Callable, states: List["BaseState"], *custom_filters,
                                         run_task=None, **kwargs) -> None:
 
         for state in states:

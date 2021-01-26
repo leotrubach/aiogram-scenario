@@ -1,7 +1,8 @@
 import logging
 from abc import ABC, abstractmethod
 
-from aiogram_scenario.fsm.transitions.locking import LockData, LockContext
+from aiogram_scenario.fsm.transitions.locking.lock_data import LockData
+from aiogram_scenario.fsm.transitions.locking.lock_context import LockContext
 from aiogram_scenario.fsm.state import BaseState
 from aiogram_scenario import exceptions, helpers
 

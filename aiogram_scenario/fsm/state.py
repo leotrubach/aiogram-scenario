@@ -1,8 +1,10 @@
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 import weakref
 
 from aiogram_scenario.handlers_registrars import HandlersRegistrar
 from aiogram_scenario import exceptions
+if TYPE_CHECKING:
+    from .fsm import FSM
 
 
 class BaseState:
@@ -52,12 +54,12 @@ class BaseState:
         self._is_initial = value
 
     @property
-    def fsm(self):
+    def fsm(self) -> Optional["FSM"]:
 
         return self._fsm() if self._fsm is not None else None
 
     @fsm.setter
-    def fsm(self, value):
+    def fsm(self, value) -> None:
 
         if value is None:
             self._fsm = value

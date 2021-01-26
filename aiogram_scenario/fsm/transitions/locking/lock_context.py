@@ -1,15 +1,16 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from .storages import AbstractLocksStorage
 from .lock_data import LockData
 from aiogram_scenario.fsm.state import BaseState
+if TYPE_CHECKING:
+    from .storages.base import AbstractLocksStorage
 
 
 class LockContext:
 
     __slots__ = ("_storage", "_source_state", "_destination_state", "_chat_id", "_user_id", "_lock_data")
 
-    def __init__(self, storage: AbstractLocksStorage, source_state: BaseState,
+    def __init__(self, storage: "AbstractLocksStorage", source_state: BaseState,
                  destination_state: BaseState, chat_id: int, user_id: int):
 
         self._storage = storage

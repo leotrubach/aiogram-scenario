@@ -4,8 +4,9 @@ import logging
 from .state import BaseState
 from .storages.base import BaseStorage, Magazine
 from .transitions.keeper import TransitionsKeeper
-from .transitions.adapters import AbstractTransitionsAdapter
-from .transitions.locking.storages import AbstractLocksStorage, MemoryLocksStorage
+from .transitions.adapters.base import AbstractTransitionsAdapter
+from .transitions.locking.storages.base import AbstractLocksStorage
+from .transitions.locking.storages.memory import MemoryLocksStorage
 from aiogram_scenario import exceptions, helpers
 from aiogram_scenario.helpers import EventUnionType
 
