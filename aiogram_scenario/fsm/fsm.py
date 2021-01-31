@@ -44,6 +44,11 @@ class FSM:
             for trigger, destination_state in self._transitions_keeper[source_state]:
                 self.remove_transition(source_state, trigger, destination_state)
 
+    @property
+    def initial_state(self) -> Optional[BaseState]:
+
+        return self._initial_state
+
     def set_initial_state(self, state: BaseState) -> None:
 
         if self._initial_state is not None:
@@ -63,8 +68,9 @@ class FSM:
         if self._initial_state is None:
             raise exceptions.InitialStateUnsettingError("the initial state has not been set!")
 
-        self._initial_state.value = self._initial_state.name
-        self._initial_state.fsm = None
+        state, self._initial_state = self._initial_state, None
+        state.value = state.name
+        state.fsm = None
 
         logger.info("Initial state is unset!")
 
