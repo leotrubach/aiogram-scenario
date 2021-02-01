@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Union, List, Optional
 import logging
@@ -14,7 +15,7 @@ class Magazine:
 
     __slots__ = ("_storage", "user_id", "chat_id", "_states")
 
-    def __init__(self, storage: "BaseStorage", *, chat_id: int, user_id: int):
+    def __init__(self, storage: BaseStorage, *, chat_id: int, user_id: int):
 
         self.chat_id = chat_id
         self.user_id = user_id

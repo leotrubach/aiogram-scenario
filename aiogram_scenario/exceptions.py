@@ -55,17 +55,9 @@ class TransitionError(ScenarioError):
                 f"'{self.destination_state}'. Cause: {self.message}")
 
 
-class NextTransitionNotFoundError(TransitionError):
+class TransitionNotFoundError(ScenarioError):
 
-    def __init__(self, source_state: str, chat_id: int, user_id: int):
-
-        super().__init__(
-            source_state=source_state,
-            destination_state="None",
-            chat_id=chat_id,
-            user_id=user_id,
-            message="next transition not found!"
-        )
+    pass
 
 
 class TransitionLockingError(TransitionError):
@@ -118,16 +110,6 @@ class TransitionsImportError(ScenarioError):
     pass
 
 
-class HandlerRegistrationError(ScenarioError):
-
-    pass
-
-
 class CodeGenerationError(ScenarioError):
-
-    pass
-
-
-class StateNotAddedToFSMError(ScenarioError):
 
     pass
