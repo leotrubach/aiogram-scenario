@@ -41,7 +41,7 @@ class AbstractLocksStorage(ABC):
     async def add_lock(self, source_state: BaseState, destination_state: BaseState,
                        chat_id: int, user_id: int) -> LockData:
 
-        chat_id, user_id = helpers.resolve_address(chat_id=chat_id, user_id=user_id)
+        chat_id, user_id = helpers.normalize_telegram_ids(chat_id=chat_id, user_id=user_id)
         is_locked = await self.check_locking(chat_id=chat_id, user_id=user_id)
         if is_locked:
             raise exceptions.TransitionLockingError(

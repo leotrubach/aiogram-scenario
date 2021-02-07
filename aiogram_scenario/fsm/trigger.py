@@ -73,7 +73,7 @@ class FSMTrigger:
         handler = _get_current_handler()
         event = _get_current_event()
         context_data = _get_current_context_data()
-        chat_id, user_id = helpers.resolve_address(chat_id=chat_id, user_id=user_id)
+        chat_id, user_id = helpers.normalize_telegram_ids(chat_id=chat_id, user_id=user_id)
 
         logger.debug("FSM received a request to move to next state "
                      f"({chat_id=}, {user_id=})...")
@@ -88,7 +88,7 @@ class FSMTrigger:
         user_id = _get_current_user_id()
         event = _get_current_event()
         context_data = _get_current_context_data()
-        chat_id, user_id = helpers.resolve_address(chat_id=chat_id, user_id=user_id)
+        chat_id, user_id = helpers.normalize_telegram_ids(chat_id=chat_id, user_id=user_id)
 
         logger.debug("FSM received a request to move to previous state "
                      f"({chat_id=}, {user_id=})...")
