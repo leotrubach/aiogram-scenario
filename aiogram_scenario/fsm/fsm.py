@@ -11,7 +11,7 @@ from .transitions.locking.storages.base import AbstractLocksStorage
 from .transitions.locking.storages.memory import MemoryLocksStorage
 from .types import RawTransitionsType
 from aiogram_scenario import exceptions, helpers
-from aiogram_scenario.handlers_registrars import FSMHandlersRegistrar
+from aiogram_scenario.registrars.fsm import FSMHandlersRegistrar
 
 
 logger = logging.getLogger(__name__)

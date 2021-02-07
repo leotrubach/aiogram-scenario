@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from aiogram_scenario.handlers_registrars import HandlersRegistrar
+    from aiogram_scenario.registrars.handlers import HandlersRegistrar
 
 
 class BaseState:

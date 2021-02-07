@@ -3,7 +3,8 @@ from .fsm.trigger import FSMTrigger
 from .fsm.middleware import FSMMiddleware
 from .fsm.state import BaseState
 from .fsm.states_group import BaseStatesGroup
-from .handlers_registrars import FSMHandlersRegistrar, HandlersRegistrar
+from .registrars.handlers import HandlersRegistrar
+from .registrars.fsm import FSMHandlersRegistrar
 
 
 __version__ = "0.9.0"
