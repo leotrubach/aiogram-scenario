@@ -1,4 +1,5 @@
-from typing import Optional, List, Collection
+import inspect
+from typing import Optional, List, Collection, Callable
 import logging
 
 from aiogram import Dispatcher
@@ -15,6 +16,15 @@ from aiogram_scenario.registrars.fsm import FSMHandlersRegistrar
 
 
 logger = logging.getLogger(__name__)
+
+
+def _get_spec_kwargs(callback: Callable, kwargs: dict) -> dict:
+
+    spec = inspect.getfullargspec(callback)
+    if spec.varkw:
+        return kwargs
+
+    return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
 
 
 class FSM:
@@ -114,7 +124,7 @@ class FSM:
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
                          f"({chat_id=}, {user_id=})...")
 
-            exit_kwargs, enter_kwargs = [helpers.get_existing_kwargs(method, processing_kwargs, check_varkw=True)
+            exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
                                          for method in (source_state.process_exit, destination_state.process_enter)]
 
             await source_state.process_exit(*processing_args, **exit_kwargs)

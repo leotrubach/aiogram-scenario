@@ -1,14 +1,4 @@
-import inspect
-from typing import Callable, Optional, Tuple
-
-
-def get_existing_kwargs(callback: Callable, kwargs: dict, check_varkw: bool = False) -> dict:
-
-    spec = inspect.getfullargspec(callback)
-    if check_varkw and (spec.varkw is not None):
-        return kwargs
-
-    return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
+from typing import Optional, Tuple
 
 
 def normalize_telegram_ids(*, chat_id: Optional[int] = None, user_id: Optional[int] = None) -> Tuple[int, int]:
