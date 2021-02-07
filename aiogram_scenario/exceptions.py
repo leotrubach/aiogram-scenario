@@ -26,18 +26,6 @@ class InitialStateUnsettingError(ScenarioError):
     pass
 
 
-class InvalidFSMStorageError(ScenarioError):
-
-    def __init__(self, storage_type: str):
-
-        self.storage_type = storage_type
-
-    def __str__(self):
-
-        return (f"invalid storage type '{self.storage_type}'! Try to choose from the ones "
-                "suggested here: aiogram_scenario.fsm.storages")
-
-
 class TransitionError(ScenarioError):
 
     def __init__(self, source_state: str, destination_state: str,
@@ -105,11 +93,13 @@ class TransitionsChronologyError(ScenarioError):
                 f"to state '{self.destination_state}'!")
 
 
-class TransitionsImportError(ScenarioError):
-
-    pass
-
-
 class CodeGenerationError(ScenarioError):
 
     pass
+
+
+class FSMIsNotInitialized(ScenarioError):
+
+    def __str__(self):
+
+        return "FSM is not initialized!"

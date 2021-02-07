@@ -1,15 +1,8 @@
 import inspect
-from typing import Callable, Union, Optional, Tuple
-
-from aiogram.types.update import (Message, CallbackQuery, InlineQuery, ChosenInlineResult,
-                                  ShippingQuery, PreCheckoutQuery, Poll, PollAnswer)
+from typing import Callable, Optional, Tuple
 
 
-EventUnionType = Union[Message, CallbackQuery, InlineQuery, ChosenInlineResult,
-                       ShippingQuery, PreCheckoutQuery, Poll, PollAnswer]
-
-
-def get_existing_kwargs(callback: Callable, check_varkw: bool = False, **kwargs) -> dict:
+def get_existing_kwargs(callback: Callable, kwargs: dict, check_varkw: bool = False) -> dict:
 
     spec = inspect.getfullargspec(callback)
     if check_varkw and (spec.varkw is not None):

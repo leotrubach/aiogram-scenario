@@ -33,7 +33,7 @@ class MongoStorage(BaseStorage, mongo.MongoStorage):
 
     async def set_magazine_states(self, *, chat: Optional[int] = None,
                                   user: Optional[int] = None,
-                                  states: List[Union[None, str]]) -> None:
+                                  states: List[Optional[str]]) -> None:
 
         chat, user = self.check_address(chat=chat, user=user)
         db = await self.get_db()

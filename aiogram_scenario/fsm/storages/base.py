@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from typing import Union, List, Optional
+from typing import List, Optional
 import logging
 
 import aiogram
@@ -20,7 +20,7 @@ class Magazine:
         self.chat_id = chat_id
         self.user_id = user_id
         self._storage = storage
-        self._states: Optional[List[Union[None, str]]] = None
+        self._states: Optional[List[Optional[str]]] = None
 
     def __str__(self):
 
@@ -39,7 +39,7 @@ class Magazine:
         logger.debug(f"States loaded into the magazine: {self._states}, "
                      f"(chat_id={self.chat_id}, user_id={self.user_id})!")
 
-    def set(self, state: Union[None, str]) -> None:
+    def set(self, state: Optional[str]) -> None:
 
         try:
             state_index = self.states.index(state)
@@ -56,7 +56,7 @@ class Magazine:
         logger.debug(f"Magazine has committed states {self._states} to storage "
                      f"(chat_id={self.chat_id}, user_id={self.user_id})!")
 
-    async def push(self, state: Union[None, str]) -> None:
+    async def push(self, state: Optional[str]) -> None:
 
         self.set(state)
         await self.commit()
@@ -71,7 +71,7 @@ class Magazine:
         return self._states is not None
 
     @property
-    def states(self) -> List[Union[None, str]]:
+    def states(self) -> List[Optional[str]]:
 
         if not self.is_loaded:
             raise exceptions.MagazineIsNotLoadedError(chat_id=self.chat_id, user_id=self.user_id)
@@ -79,12 +79,12 @@ class Magazine:
         return self._states
 
     @property
-    def current_state(self) -> Union[None, str]:
+    def current_state(self) -> Optional[str]:
 
         return self.states[-1]
 
     @property
-    def penultimate_state(self) -> Union[None, str]:
+    def penultimate_state(self) -> Optional[str]:
 
         try:
             return self.states[-2]
@@ -97,13 +97,13 @@ class BaseStorage(aiogram.dispatcher.storage.BaseStorage, ABC):
 
     @abstractmethod
     async def set_magazine_states(self, *, chat: Optional[int] = None, user: Optional[int] = None,
-                                  states: List[Union[None, str]]) -> None:
+                                  states: List[Optional[str]]) -> None:
 
         pass
 
     @abstractmethod
     async def get_magazine_states(self, *, chat: Optional[int] = None,
-                                  user: Optional[int] = None) -> List[Union[None, str]]:
+                                  user: Optional[int] = None) -> List[Optional[str]]:
 
         pass
 

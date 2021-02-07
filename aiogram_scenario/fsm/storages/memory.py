@@ -25,7 +25,7 @@ class MemoryStorage(BaseStorage, memory.MemoryStorage):
         await magazine.push(state)
 
     async def get_state(self, *, chat: Union[str, int, None] = None, user: Union[str, int, None] = None,
-                        default: Optional[str] = None) -> Union[None, str]:
+                        default: Optional[str] = None) -> Optional[str]:
 
         chat, user = self.resolve_address(chat=chat, user=user)
         magazine = self.get_magazine(user=user, chat=chat)
@@ -34,7 +34,7 @@ class MemoryStorage(BaseStorage, memory.MemoryStorage):
         return magazine.current_state
 
     async def set_magazine_states(self, *, chat: Optional[int] = None, user: Optional[int] = None,
-                                  states: List[Union[None, str]]) -> None:
+                                  states: List[Optional[str]]) -> None:
 
         chat, user = self.resolve_address(chat=chat, user=user)
         self.data[chat][user]["magazine"] = states.copy()
