@@ -172,7 +172,7 @@ class CodeGenerator:
 
     def _render_template(self, name: str, *args, **kwargs) -> str:
 
-        template = self._environment.get_template(name)
+        template = self._environment.get_template(f"{name}.jinja2")
         content = template.render(*args, **kwargs)
 
         return content
