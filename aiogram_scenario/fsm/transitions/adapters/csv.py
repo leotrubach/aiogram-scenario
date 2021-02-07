@@ -11,9 +11,9 @@ class CSVTransitionsAdapter(AbstractTransitionsAdapter):
         super().__init__(filename)
         self._delimiter = delimiter
 
-    def fetch_content(self) -> str:
+    def fetch_content(self, filename: str, encoding: str) -> str:
 
-        with open(self.filename, newline="") as file_wrapper:
+        with open(filename, encoding=encoding, newline="") as file_wrapper:
             content = file_wrapper.read()
 
         return content
