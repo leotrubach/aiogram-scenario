@@ -89,7 +89,7 @@ class FSM:
                        handler: str, direction: Optional[str] = None) -> None:
 
         if not self.is_initialized:
-            raise exceptions.FSMIsNotInitialized()
+            raise exceptions.FSMIsNotInitializedError()
 
         self._transitions_keeper.add(source_state, destination_state, handler, direction)
         for state in (source_state, destination_state):
@@ -102,7 +102,7 @@ class FSM:
                           handler: str, direction: Optional[str] = None) -> None:
 
         if not self.is_initialized:
-            raise exceptions.FSMIsNotInitialized()
+            raise exceptions.FSMIsNotInitializedError()
 
         self._transitions_keeper.remove(source_state, destination_state, handler, direction)
         states = self._transitions_keeper.get_states()

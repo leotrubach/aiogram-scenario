@@ -98,7 +98,7 @@ class CodeGenerationError(ScenarioError):
     pass
 
 
-class FSMIsNotInitialized(ScenarioError):
+class FSMIsNotInitializedError(ScenarioError):
 
     def __str__(self):
 
