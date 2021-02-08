@@ -37,6 +37,7 @@ class FSM:
                             "Select a storage from aiogram_scenario.fsm.storages!")
 
         self._dispatcher = dispatcher
+        self._states_mapping = StatesMapping()
 
         self._initial_state: Optional[BaseState] = None
         if initial_state is not None:
@@ -47,7 +48,6 @@ class FSM:
         self._locks_storage = locks_storage
 
         self._transitions_keeper = TransitionsKeeper()
-        self._states_mapping = StatesMapping()
         self.registrar = FSMHandlersRegistrar(self._dispatcher, self._states_mapping)
 
     @property
