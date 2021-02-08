@@ -1,5 +1,5 @@
 import inspect
-from typing import Optional, List, Collection, Callable
+from typing import Optional, Collection, Callable
 import logging
 
 from aiogram import Dispatcher
@@ -186,26 +186,27 @@ class FSM:
         await self.execute_transition(source_state, destination_state, magazine=magazine,
                                       processing_args=processing_args, processing_kwargs=processing_kwargs)
 
-    async def set_transitions_chronology(self, states: List[BaseState], *, chat_id: int, user_id: int) -> None:
-
-        if not self.is_initialized:
-            raise exceptions.FSMIsNotInitialized()
-
-        for index, source_state in enumerate(states):
-            try:
-                destination_state = states[index + 1]
-            except IndexError:
-                break
-            if destination_state not in self._transitions_keeper[source_state].values():
-                raise exceptions.TransitionsChronologyError(
-                    source_state=str(source_state),
-                    destination_state=str(destination_state),
-                    states=[str(i) for i in states]
-                )
-
-        magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
-        for state in states:
-            magazine.set(self._states_mapping.get_value(state))
-        await magazine.commit()
-
-        logger.info(f"Chronology of transitions ({', '.join(magazine.states)}) is set ({chat_id=}, {user_id=})!")
+    # TODO: implement a mechanism for setting a specific state with a side effect
+    # async def set_transitions_chronology(self, states: List[BaseState], *, chat_id: int, user_id: int) -> None:
+    #
+    #     if not self.is_initialized:
+    #         raise exceptions.FSMIsNotInitialized()
+    #
+    #     for index, source_state in enumerate(states):
+    #         try:
+    #             destination_state = states[index + 1]
+    #         except IndexError:
+    #             break
+    #         if destination_state not in self._transitions_keeper[source_state].values():
+    #             raise exceptions.TransitionsChronologyError(
+    #                 source_state=str(source_state),
+    #                 destination_state=str(destination_state),
+    #                 states=[str(i) for i in states]
+    #             )
+    #
+    #     magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
+    #     for state in states:
+    #         magazine.set(self._states_mapping.get_value(state))
+    #     await magazine.commit()
+    #
+    #     logger.info(f"Chronology of transitions ({', '.join(magazine.states)}) is set ({chat_id=}, {user_id=})!")
