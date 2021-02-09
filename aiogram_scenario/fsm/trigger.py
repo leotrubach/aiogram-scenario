@@ -78,9 +78,9 @@ class FSMTrigger:
         logger.debug("FSM received a request to move to next state "
                      f"({chat_id=}, {user_id=})...")
 
-        magazine = self._fsm.storage.get_magazine(chat=chat_id, user=user_id)
-        await self._fsm.execute_next_transition(handler.__name__, direction, magazine=magazine,
-                                                processing_args=(event,), processing_kwargs=context_data)
+        await self._fsm.execute_next_transition(chat_id=chat_id, user_id=user_id, handler=handler.__name__,
+                                                direction=direction, processing_args=(event,),
+                                                processing_kwargs=context_data)
 
     async def go_back(self) -> None:
 
@@ -93,6 +93,5 @@ class FSMTrigger:
         logger.debug("FSM received a request to move to previous state "
                      f"({chat_id=}, {user_id=})...")
 
-        magazine = self._fsm.storage.get_magazine(chat=chat_id, user=user_id)
-        await self._fsm.execute_back_transition(magazine=magazine, processing_args=(event,),
+        await self._fsm.execute_back_transition(chat_id=chat_id, user_id=user_id, processing_args=(event,),
                                                 processing_kwargs=context_data)

@@ -112,30 +112,6 @@ class FSM:
 
         logger.info(f"Removed transition ({source_state=}, {destination_state=}, {handler=}, {direction=})!")
 
-    async def execute_transition(self, source_state: BaseState, destination_state: BaseState, *,
-                                 magazine: Magazine, processing_args: tuple, processing_kwargs: dict) -> None:
-
-        if not magazine.is_loaded:
-            await magazine.load()
-
-        chat_id, user_id = magazine.chat_id, magazine.user_id
-        async with self._locks_storage.acquire(source_state, destination_state,
-                                               chat_id=chat_id, user_id=user_id):
-            logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
-                         f"({chat_id=}, {user_id=})...")
-
-            exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
-                                         for method in (source_state.process_exit, destination_state.process_enter)]
-
-            await source_state.process_exit(*processing_args, **exit_kwargs)
-            logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
-            await destination_state.process_enter(*processing_args, **enter_kwargs)
-            logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
-            await magazine.push(self._states_mapping.get_value(destination_state))
-            logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
-
-        logger.debug(f"Transition to '{destination_state}' ({chat_id=}, {user_id=}) completed!")
-
     def import_transitions(self, transitions: RawTransitionsType, *, states: Collection[BaseState]) -> None:
 
         states_mapping = {state.name: state for state in states}
@@ -151,40 +127,78 @@ class FSM:
 
         logger.info(f"Transitions successfully imported!")
 
-    async def execute_next_transition(self, handler: str, direction: Optional[str] = None, *,
-                                      magazine: Magazine, processing_args: tuple,
-                                      processing_kwargs: dict) -> None:
+    async def execute_transition(self, *, chat_id: int, user_id: int, source_state: BaseState,
+                                 destination_state: BaseState, processing_args: tuple = (),
+                                 processing_kwargs: Optional[dict] = None) -> None:
 
-        if not magazine.is_loaded:
-            await magazine.load()
+        magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
+        await magazine.load()
+        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+                                                     destination_state=destination_state,
+                                                     processing_args=processing_args,
+                                                     processing_kwargs=processing_kwargs)
+
+    async def execute_next_transition(self, *, chat_id: int, user_id: int, handler: str,
+                                      direction: Optional[str] = None, processing_args: tuple = (),
+                                      processing_kwargs: Optional[dict] = None) -> None:
+
+        magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
+        await magazine.load()
 
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
             destination_state = self._transitions_keeper[source_state][handler][direction]
         except KeyError:
-            chat_id, user_id = magazine.chat_id, magazine.user_id
             raise exceptions.TransitionNotFoundError(f"not found next transition ({source_state=}, "
                                                      f"{handler=}, {direction=} {chat_id=}, {user_id=})!")
 
-        await self.execute_transition(source_state, destination_state, magazine=magazine,
-                                      processing_args=processing_args, processing_kwargs=processing_kwargs)
+        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+                                                     destination_state=destination_state,
+                                                     processing_args=processing_args,
+                                                     processing_kwargs=processing_kwargs)
 
-    async def execute_back_transition(self, *, magazine: Magazine, processing_args: tuple,
-                                      processing_kwargs: dict) -> None:
+    async def execute_back_transition(self, *, chat_id: int, user_id: int, processing_args: tuple = (),
+                                      processing_kwargs: Optional[dict] = None) -> None:
 
-        if not magazine.is_loaded:
-            await magazine.load()
+        magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
+        await magazine.load()
 
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
             destination_state = self._states_mapping.get_state(magazine.penultimate_state)
         except exceptions.StateNotFoundError:
-            chat_id, user_id = magazine.chat_id, magazine.user_id
             raise exceptions.TransitionNotFoundError(f"not found back transition ({source_state=}, "
                                                      f"{chat_id=}, {user_id=})!")
 
-        await self.execute_transition(source_state, destination_state, magazine=magazine,
-                                      processing_args=processing_args, processing_kwargs=processing_kwargs)
+        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+                                                     destination_state=destination_state,
+                                                     processing_args=processing_args,
+                                                     processing_kwargs=processing_kwargs)
+
+    async def _execute_transition_with_magazine(self, magazine: Magazine, *, source_state: BaseState,
+                                                destination_state: BaseState, processing_args: tuple = (),
+                                                processing_kwargs: Optional[dict] = None) -> None:
+
+        chat_id, user_id = magazine.chat_id, magazine.user_id
+        async with self._locks_storage.acquire(source_state, destination_state,
+                                               chat_id=chat_id, user_id=user_id):
+            logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
+                         f"({chat_id=}, {user_id=})...")
+
+            if processing_kwargs is None:
+                exit_kwargs, enter_kwargs = {}, {}
+            else:
+                exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
+                                             for method in (source_state.process_exit, destination_state.process_enter)]
+
+            await source_state.process_exit(*processing_args, **exit_kwargs)
+            logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
+            await destination_state.process_enter(*processing_args, **enter_kwargs)
+            logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
+            await magazine.push(self._states_mapping.get_value(destination_state))
+            logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
+
+        logger.debug(f"Transition to '{destination_state}' ({chat_id=}, {user_id=}) completed!")
 
     # TODO: implement a mechanism for setting a specific state with a side effect
     # async def set_transitions_chronology(self, states: List[BaseState], *, chat_id: int, user_id: int) -> None:
