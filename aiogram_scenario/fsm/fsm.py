@@ -112,7 +112,7 @@ class FSM:
 
         logger.info(f"Removed transition ({source_state=}, {destination_state=}, {handler=}, {direction=})!")
 
-    def import_transitions(self, transitions: RawTransitionsType, *, states: Collection[BaseState]) -> None:
+    def import_transitions(self, transitions: RawTransitionsType, states: Collection[BaseState]) -> None:
 
         states_mapping = {state.name: state for state in states}
         for source_state in transitions:
