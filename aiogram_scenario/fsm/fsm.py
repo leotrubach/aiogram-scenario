@@ -1,5 +1,5 @@
 import inspect
-from typing import Optional, Collection, Callable
+from typing import Optional, Collection, Callable, Union
 import logging
 
 from aiogram import Dispatcher
@@ -86,10 +86,13 @@ class FSM:
         logger.info(f"Initial state is unset!")
 
     def add_transition(self, source_state: BaseState, destination_state: BaseState,
-                       handler: str, direction: Optional[str] = None) -> None:
+                       handler: Union[str, Callable], direction: Optional[str] = None) -> None:
 
         if not self.is_initialized:
             raise exceptions.FSMIsNotInitializedError()
+
+        if isinstance(handler, Callable):
+            handler = handler.__name__
 
         self._transitions_keeper.add(source_state, destination_state, handler, direction)
         for state in (source_state, destination_state):
@@ -99,10 +102,13 @@ class FSM:
         logger.info(f"Added transition ({source_state=}, {destination_state=}, {handler=}, {direction=})!")
 
     def remove_transition(self, source_state: BaseState, destination_state: BaseState,
-                          handler: str, direction: Optional[str] = None) -> None:
+                          handler: Union[str, Callable], direction: Optional[str] = None) -> None:
 
         if not self.is_initialized:
             raise exceptions.FSMIsNotInitializedError()
+
+        if isinstance(handler, Callable):
+            handler = handler.__name__
 
         self._transitions_keeper.remove(source_state, destination_state, handler, direction)
         states = self._transitions_keeper.get_states()
@@ -138,9 +144,12 @@ class FSM:
                                                      processing_args=processing_args,
                                                      processing_kwargs=processing_kwargs)
 
-    async def execute_next_transition(self, *, chat_id: int, user_id: int, handler: str,
+    async def execute_next_transition(self, *, chat_id: int, user_id: int, handler: Union[str, Callable],
                                       direction: Optional[str] = None, processing_args: tuple = (),
                                       processing_kwargs: Optional[dict] = None) -> None:
+
+        if isinstance(handler, Callable):
+            handler = handler.__name__
 
         magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
