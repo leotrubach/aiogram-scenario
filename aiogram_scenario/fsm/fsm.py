@@ -144,12 +144,9 @@ class FSM:
                                                      processing_args=processing_args,
                                                      processing_kwargs=processing_kwargs)
 
-    async def execute_next_transition(self, *, chat_id: int, user_id: int, handler: Union[str, Callable],
+    async def execute_next_transition(self, *, chat_id: int, user_id: int, handler: str,
                                       direction: Optional[str] = None, processing_args: tuple = (),
                                       processing_kwargs: Optional[dict] = None) -> None:
-
-        if isinstance(handler, Callable):
-            handler = handler.__name__
 
         magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
