@@ -66,3 +66,11 @@ class TransitionsKeeper:
             del self._transitions[source_state][handler]
         if not self._transitions[source_state]:
             del self._transitions[source_state]
+
+    def check_existence(self, source_state: BaseState, destination_state: BaseState,
+                        handler: str, direction: Optional[str] = None) -> bool:
+
+        try:
+            return self._transitions[source_state][handler][direction] == destination_state
+        except KeyError:
+            return False
