@@ -75,16 +75,6 @@ class FSM:
 
         logger.info(f"Initial state '{state}' is set!")
 
-    def unset_initial_state(self) -> None:
-
-        if self._initial_state is None:
-            raise exceptions.InitialStateUnsettingError("initial state is not set!")
-
-        self._initial_state = None
-        del self._states_mapping[None]
-
-        logger.info(f"Initial state is unset!")
-
     def add_transition(self, source_state: BaseState, destination_state: BaseState,
                        handler: Union[str, Callable], direction: Optional[str] = None) -> None:
 

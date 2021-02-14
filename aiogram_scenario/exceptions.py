@@ -21,11 +21,6 @@ class InitialStateSettingError(ScenarioError):
     pass
 
 
-class InitialStateUnsettingError(ScenarioError):
-
-    pass
-
-
 class TransitionError(ScenarioError):
 
     def __init__(self, source_state: str, destination_state: str,
