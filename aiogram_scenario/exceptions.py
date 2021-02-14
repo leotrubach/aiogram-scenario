@@ -43,18 +43,16 @@ class TransitionNotFoundError(ScenarioError):
     pass
 
 
-class TransitionLockingError(TransitionError):
+class TransitionLockingError(ScenarioError):
 
-    def __init__(self, source_state: str, destination_state: str,
-                 chat_id: int, user_id: int):
+    def __init__(self, chat_id: int, user_id: int):
 
-        super().__init__(
-            source_state=source_state,
-            destination_state=destination_state,
-            chat_id=chat_id,
-            user_id=user_id,
-            message="lock is active!"
-        )
+        self.chat_id = chat_id
+        self.user_id = user_id
+
+    def __str__(self):
+
+        return f"there is already an active lock (chat_id={self.chat_id}, user_id={self.user_id})!"
 
 
 class MagazineIsNotLoadedError(ScenarioError):

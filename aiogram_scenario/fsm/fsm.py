@@ -43,9 +43,7 @@ class FSM:
         if initial_state is not None:
             self.set_initial_state(initial_state)
 
-        if locks_storage is None:
-            locks_storage = MemoryLocksStorage()
-        self._locks_storage = locks_storage
+        self._locks_storage = locks_storage or MemoryLocksStorage()
 
         self._transitions_keeper = TransitionsKeeper()
         self.registrar = FSMHandlersRegistrar(self._dispatcher, self._states_mapping)
@@ -176,8 +174,8 @@ class FSM:
                                                 processing_kwargs: Optional[dict] = None) -> None:
 
         chat_id, user_id = magazine.chat_id, magazine.user_id
-        async with self._locks_storage.acquire(source_state, destination_state,
-                                               chat_id=chat_id, user_id=user_id):
+
+        async with self._locks_storage.acquire(chat_id=chat_id, user_id=user_id):
             logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
                          f"({chat_id=}, {user_id=})...")
 
