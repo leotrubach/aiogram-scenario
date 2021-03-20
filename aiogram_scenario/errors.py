@@ -248,3 +248,16 @@ class MagazineIsNotLoadedError(BaseError):
     def message(self):
 
         return "magazine is not loaded!"
+
+
+class StateValueIsAlreadyExistsError(BaseError):
+
+    def __init__(self, value, state):
+
+        self.value = value
+        self.state = state
+
+    @property
+    def message(self) -> str:
+
+        return f"value {self.value!r} is already exists!"
