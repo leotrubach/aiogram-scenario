@@ -18,7 +18,10 @@ class StatesMapping:
 
     def check(self, value: Optional[str], state: BaseState) -> bool:
 
-        return (value, state) == (self._states_values[state], self._values_states[value])
+        try:
+            return (value, state) == (self._states_values[state], self._values_states[value])
+        except KeyError:
+            return False
 
     def remove_by_value(self, value: Optional[str]) -> BaseState:
 
