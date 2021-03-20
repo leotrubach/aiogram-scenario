@@ -16,15 +16,23 @@ class StatesMapping:
         self._values_states[value] = state
         self._states_values[state] = value
 
-    def remove_by_value(self, value: Optional[str]) -> None:
+    def check(self, value: Optional[str], state: BaseState) -> bool:
+
+        return (value, state) == (self._states_values[state], self._values_states[value])
+
+    def remove_by_value(self, value: Optional[str]) -> BaseState:
 
         state = self._values_states.pop(value)
         del self._states_values[state]
 
-    def remove_by_state(self, state: BaseState) -> None:
+        return state
+
+    def remove_by_state(self, state: BaseState) -> Optional[str]:
 
         value = self._states_values.pop(state)
         del self._values_states[value]
+
+        return value
 
     def get_value(self, state: BaseState) -> Optional[str]:
 
@@ -39,11 +47,3 @@ class StatesMapping:
             return self._values_states[value]
         except KeyError:
             raise errors.StateValueNotFoundError(value)
-
-    def check_value(self, value: Optional[str]) -> bool:
-
-        return value in self._values_states
-
-    def check_state(self, state: BaseState) -> bool:
-
-        return state in self._states_values
