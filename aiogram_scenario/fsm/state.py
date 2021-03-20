@@ -7,8 +7,6 @@ if TYPE_CHECKING:
 
 class BaseState:
 
-    __slots__ = ("name",)
-
     def __init__(self, *, name: Optional[str] = None):
 
         self.name = name or type(self).__name__
