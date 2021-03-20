@@ -1,14 +1,29 @@
-from typing import Collection, List
+from typing import Collection, FrozenSet
 
 from .state import BaseState
 
 
-class BaseStatesGroup:
+class StatesGroup:
 
-    @classmethod
-    def select(cls, *, exclude: Collection[BaseState] = ()) -> List[BaseState]:
+    def __init__(self, *states: BaseState):
 
-        cls_values = vars(cls).values()
-        states = [i for i in cls_values if isinstance(i, BaseState) and (i not in exclude)]
+        self._states = frozenset(states)
 
-        return states
+    def __len__(self):
+
+        return len(self._states)
+
+    def __iter__(self):
+
+        return iter(self._states)
+
+    def __contains__(self, state: BaseState):
+
+        return state in self._states
+
+    def select(self, *, exclude: Collection[BaseState] = ()) -> FrozenSet[BaseState]:
+
+        if not exclude:
+            return self._states
+        else:
+            return frozenset({i for i in self._states if i not in exclude})

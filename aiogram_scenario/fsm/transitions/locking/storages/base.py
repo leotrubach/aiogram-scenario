@@ -2,18 +2,13 @@ import logging
 from abc import ABC, abstractmethod
 
 from aiogram_scenario.fsm.transitions.locking.lock_context import LockContext
-from aiogram_scenario import exceptions
+from aiogram_scenario import errors
 
 
 logger = logging.getLogger(__name__)
 
 
-class AbstractLocksStorage(ABC):
-
-    @abstractmethod
-    async def check(self, *, chat_id: int, user_id: int) -> bool:
-
-        pass
+class AbstractLockingStorage(ABC):
 
     @abstractmethod
     async def set(self, *, chat_id: int, user_id: int) -> None:
@@ -25,6 +20,11 @@ class AbstractLocksStorage(ABC):
 
         pass
 
+    @abstractmethod
+    async def check(self, *, chat_id: int, user_id: int) -> bool:
+
+        pass
+
     def acquire(self, *, chat_id: int, user_id: int) -> LockContext:
 
         return LockContext(storage=self, chat_id=chat_id, user_id=user_id)
@@ -33,7 +33,7 @@ class AbstractLocksStorage(ABC):
 
         is_locked = await self.check(chat_id=chat_id, user_id=user_id)
         if is_locked:
-            raise exceptions.TransitionLockingError(chat_id=chat_id, user_id=user_id)
+            raise errors.TransitionLockIsActiveError(chat_id=chat_id, user_id=user_id)
 
         await self.set(chat_id=chat_id, user_id=user_id)
 

@@ -6,7 +6,7 @@ from .trigger import FSMTrigger
 
 class FSMMiddleware(BaseMiddleware):
 
-    def __init__(self, fsm: FSM, *, trigger_kwarg: str = "fsm"):
+    def __init__(self, fsm: FSM, *, trigger_kwarg: str = "fsm_trigger"):
 
         super().__init__()
         self._fsm = fsm

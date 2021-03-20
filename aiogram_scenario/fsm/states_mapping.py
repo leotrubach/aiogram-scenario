@@ -1,6 +1,7 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 from .state import BaseState
+from aiogram_scenario import errors
 
 
 class StatesMapping:
@@ -10,35 +11,39 @@ class StatesMapping:
         self._values_states: Dict[Optional[str], BaseState] = {}
         self._states_values: Dict[BaseState, Optional[str]] = {}
 
-    def __setitem__(self, key: Optional[str], value: BaseState):
+    def add(self, value: Optional[str], state: BaseState):
 
-        self._values_states[key] = value
-        self._states_values[value] = key
+        self._values_states[value] = state
+        self._states_values[state] = value
 
-    def __delitem__(self, key: Union[Optional[str], BaseState]):
+    def remove_by_value(self, value: Optional[str]) -> None:
 
-        if (key is None) or isinstance(key, str):
-            state = self._values_states.pop(key)
-            del self._states_values[state]
-        elif isinstance(key, BaseState):
-            value = self._states_values.pop(key)
-            del self._values_states[value]
-        else:
-            raise TypeError(f"incorrect type key '{type(key).__name__}'!")
+        state = self._values_states.pop(value)
+        del self._states_values[state]
+
+    def remove_by_state(self, state: BaseState) -> None:
+
+        value = self._states_values.pop(state)
+        del self._values_states[value]
 
     def get_value(self, state: BaseState) -> Optional[str]:
 
-        return self._states_values[state]
+        try:
+            return self._states_values[state]
+        except KeyError:
+            raise errors.StateNotFoundError(state)
 
     def get_state(self, value: Optional[str]) -> BaseState:
 
-        return self._values_states[value]
+        try:
+            return self._values_states[value]
+        except KeyError:
+            raise errors.StateValueNotFoundError(value)
 
-    def check_existence(self, state: Union[Optional[str], BaseState]) -> bool:
+    def check_value(self, value: Optional[str]) -> bool:
 
-        if (state is None) or isinstance(state, str):
-            return state in self._values_states
-        elif isinstance(state, BaseState):
-            return state in self._states_values
-        else:
-            raise TypeError(f"incorrect type state '{type(state).__name__}'!")
+        return value in self._values_states
+
+    def check_state(self, state: BaseState) -> bool:
+
+        return state in self._states_values

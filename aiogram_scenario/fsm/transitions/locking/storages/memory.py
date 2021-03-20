@@ -1,18 +1,11 @@
-from .base import AbstractLocksStorage
+from .base import AbstractLockingStorage
 
 
-class MemoryLocksStorage(AbstractLocksStorage):
+class MemoryLockingStorage(AbstractLockingStorage):
 
     def __init__(self):
 
         self._locks = {}
-
-    async def check(self, *, chat_id: int, user_id: int) -> bool:
-
-        try:
-            return user_id in self._locks[chat_id]
-        except KeyError:
-            return False
 
     async def set(self, *, chat_id: int, user_id: int) -> None:
 
@@ -27,3 +20,10 @@ class MemoryLocksStorage(AbstractLocksStorage):
         chat_users_ids.remove(user_id)
         if not chat_users_ids:
             del self._locks[chat_id]
+
+    async def check(self, *, chat_id: int, user_id: int) -> bool:
+
+        try:
+            return user_id in self._locks[chat_id]
+        except KeyError:
+            return False

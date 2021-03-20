@@ -1,14 +1,14 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .storages.base import AbstractLocksStorage
+    from .storages.base import AbstractLockingStorage
 
 
 class LockContext:
 
-    __slots__ = ("_storage", "_chat_id", "_user_id", "_lock_data")
+    __slots__ = ("_storage", "_chat_id", "_user_id")
 
-    def __init__(self, storage: "AbstractLocksStorage", chat_id: int, user_id: int):
+    def __init__(self, storage: "AbstractLockingStorage", *, chat_id: int, user_id: int):
 
         self._storage = storage
         self._chat_id = chat_id

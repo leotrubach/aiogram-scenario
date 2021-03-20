@@ -1,1 +1,1 @@
-recursive-include aiogram_scenario/codegen/templates/ *
+recursive-include aiogram_scenario/codegen/templates/ *.jinja2

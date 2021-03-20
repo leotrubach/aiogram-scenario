@@ -58,6 +58,17 @@ def _get_current_context_data() -> dict:
     return data
 
 
+def _get_context_items() -> tuple:
+
+    chat_id = _get_current_chat_id()
+    user_id = _get_current_user_id()
+    handler = _get_current_handler()
+    event = _get_current_event()
+    context_data = _get_current_context_data()
+
+    return chat_id, user_id, handler, event, context_data
+
+
 class FSMTrigger:
 
     __slots__ = ("_fsm",)
@@ -68,30 +79,22 @@ class FSMTrigger:
 
     async def go_next(self, direction: Optional[str] = None) -> None:
 
-        chat_id = _get_current_chat_id()
-        user_id = _get_current_user_id()
-        handler = _get_current_handler()
-        event = _get_current_event()
-        context_data = _get_current_context_data()
+        chat_id, user_id, handler, event, context_data = _get_context_items()
         chat_id, user_id = helpers.normalize_telegram_ids(chat_id=chat_id, user_id=user_id)
+        handler = handler.__name__
 
-        logger.debug("FSM received a request to move to next state "
-                     f"({chat_id=}, {user_id=})...")
+        logger.debug(f"FSM received a request to move to next state ({chat_id=}, {user_id=})...")
 
-        await self._fsm.execute_next_transition(chat_id=chat_id, user_id=user_id, handler=handler.__name__,
+        await self._fsm.execute_next_transition(chat_id=chat_id, user_id=user_id, handler=handler,
                                                 direction=direction, processing_args=(event,),
                                                 processing_kwargs=context_data)
 
     async def go_back(self) -> None:
 
-        chat_id = _get_current_chat_id()
-        user_id = _get_current_user_id()
-        event = _get_current_event()
-        context_data = _get_current_context_data()
+        chat_id, user_id, _, event, context_data = _get_context_items()
         chat_id, user_id = helpers.normalize_telegram_ids(chat_id=chat_id, user_id=user_id)
 
-        logger.debug("FSM received a request to move to previous state "
-                     f"({chat_id=}, {user_id=})...")
+        logger.debug(f"FSM received a request to move to previous state ({chat_id=}, {user_id=})...")
 
         await self._fsm.execute_back_transition(chat_id=chat_id, user_id=user_id, processing_args=(event,),
                                                 processing_kwargs=context_data)

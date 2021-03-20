@@ -2,7 +2,7 @@ from typing import Optional, Set
 
 from aiogram_scenario.fsm.state import BaseState
 from aiogram_scenario.fsm.types import TransitionsType
-from aiogram_scenario import exceptions
+from aiogram_scenario import errors
 
 
 class TransitionsKeeper:
@@ -10,27 +10,15 @@ class TransitionsKeeper:
     def __init__(self):
 
         self._transitions: TransitionsType = {}
+        self._states = set()
 
-    def __getitem__(self, item):
+    @property
+    def states(self) -> Set[BaseState]:
 
-        return self._transitions[item]
+        return self._states.copy()
 
-    def get_states(self) -> Set[BaseState]:
-
-        states = set()
-        for source_state in self._transitions:
-            states.add(source_state)
-            for handler in self._transitions[source_state]:
-                for _, destination_state in self._transitions[source_state][handler].items():
-                    states.add(destination_state)
-
-        return states
-
-    def add(self, source_state: BaseState, destination_state: BaseState,
+    def add(self, *, source_state: BaseState, destination_state: BaseState,
             handler: str, direction: Optional[str] = None) -> None:
-
-        if source_state == destination_state:
-            raise ValueError(f"source state '{source_state}' is the same as destination state!")
 
         if source_state not in self._transitions:
             self._transitions[source_state] = {
@@ -38,6 +26,7 @@ class TransitionsKeeper:
                     direction: destination_state
                 }
             }
+            self._states.add(source_state)
         elif handler not in self._transitions[source_state]:
             self._transitions[source_state][handler] = {
                 direction: destination_state
@@ -45,32 +34,45 @@ class TransitionsKeeper:
         elif direction not in self._transitions[source_state][handler]:
             self._transitions[source_state][handler][direction] = destination_state
         else:
-            raise exceptions.TransitionAddingError(
-                f"transition is already defined ({source_state=}, {handler=}, {direction=})!"
+            raise errors.TransitionIsExistsError(
+                source_state=source_state,
+                existing_destination_state=self._transitions[source_state][handler][direction],
+                handler=handler,
+                direction=direction
             )
 
-    def remove(self, source_state: BaseState, destination_state: BaseState,
-               handler: str, direction: Optional[str] = None) -> None:
+        self._states.add(destination_state)
 
-        if source_state == destination_state:
-            raise ValueError(f"source state '{source_state}' is the same as destination state!")
+    def remove(self, *, source_state: BaseState, handler: str, direction: Optional[str] = None) -> BaseState:
 
         try:
-            del self._transitions[source_state][handler][direction]
+            destination_state = self._transitions[source_state][handler].pop(direction)
         except KeyError:
-            raise exceptions.TransitionRemovingError(
-                f"transition not found for removing ({source_state=}, {handler=}, {direction=}, {destination_state=})!"
-            )
+            raise errors.TransitionRemovingError(source_state, handler, direction)
 
         if not self._transitions[source_state][handler]:
             del self._transitions[source_state][handler]
         if not self._transitions[source_state]:
             del self._transitions[source_state]
 
-    def check_existence(self, source_state: BaseState, destination_state: BaseState,
-                        handler: str, direction: Optional[str] = None) -> bool:
+        existing_states = set()
+        for source_state_ in self._transitions:
+            existing_states.add(source_state_)
+            for handler in self._transitions[source_state]:
+                for destination_state_ in self._transitions[source_state][handler].values():
+                    existing_states.add(destination_state_)
+
+        for state in (source_state, destination_state):
+            if state not in existing_states:
+                self._states.remove(state)
+
+        return destination_state
+
+    def get_destination_state(self, source_state: BaseState,
+                              handler: str, direction: Optional[str] = None) -> BaseState:
 
         try:
-            return self._transitions[source_state][handler][direction] == destination_state
+            return self._transitions[source_state][handler][direction]
         except KeyError:
-            return False
+            raise errors.TransitionNotFoundError(source_state=source_state, handler=handler,
+                                                 direction=direction)

@@ -1,5 +1,5 @@
 import inspect
-from typing import Optional, Collection, Callable, Union
+from typing import Optional, Callable, Iterable, Union
 import logging
 
 from aiogram import Dispatcher
@@ -8,11 +8,11 @@ from .state import BaseState
 from .states_mapping import StatesMapping
 from .storages.base import BaseStorage, Magazine
 from .transitions.keeper import TransitionsKeeper
-from .transitions.locking.storages.base import AbstractLocksStorage
-from .transitions.locking.storages.memory import MemoryLocksStorage
+from .transitions.locking.storages.base import AbstractLockingStorage
+from .transitions.locking.storages.memory import MemoryLockingStorage
 from .types import RawTransitionsType
-from aiogram_scenario import exceptions
 from aiogram_scenario.registrars.fsm import FSMHandlersRegistrar
+from aiogram_scenario import errors
 
 
 logger = logging.getLogger(__name__)
@@ -29,12 +29,11 @@ def _get_spec_kwargs(callback: Callable, kwargs: dict) -> dict:
 
 class FSM:
 
-    def __init__(self, dispatcher: Dispatcher, *, locks_storage: Optional[AbstractLocksStorage] = None,
+    def __init__(self, dispatcher: Dispatcher, *, locking_storage: Optional[AbstractLockingStorage] = None,
                  initial_state: Optional[BaseState] = None):
 
-        if not isinstance(dispatcher.storage, BaseStorage):
-            raise TypeError(f"invalid storage type '{type(dispatcher.storage).__name__}'! "
-                            "Select a storage from aiogram_scenario.fsm.storages!")
+        if not isinstance(dispatcher.storage, BaseStorage):  # in case of storage from aiogram
+            raise errors.InvalidFSMStorageTypeError(type(dispatcher.storage))
 
         self._dispatcher = dispatcher
         self._states_mapping = StatesMapping()
@@ -43,10 +42,9 @@ class FSM:
         if initial_state is not None:
             self.set_initial_state(initial_state)
 
-        self._locks_storage = locks_storage or MemoryLocksStorage()
-
+        self._locking_storage = locking_storage or MemoryLockingStorage()
         self._transitions_keeper = TransitionsKeeper()
-        self.registrar = FSMHandlersRegistrar(self._dispatcher, self._states_mapping)
+        self.handlers_registrar = FSMHandlersRegistrar(self._dispatcher, self._states_mapping)
 
     @property
     def is_initialized(self) -> bool:
@@ -58,6 +56,11 @@ class FSM:
 
         return self._initial_state
 
+    @initial_state.setter
+    def initial_state(self, state: BaseState) -> None:
+
+        self.set_initial_state(state)
+
     @property
     def storage(self) -> BaseStorage:
 
@@ -66,47 +69,56 @@ class FSM:
     def set_initial_state(self, state: BaseState) -> None:
 
         if self._initial_state is not None:
-            raise exceptions.InitialStateSettingError("initial state has already been set before!")
+            raise errors.InitialStateIsAlreadySetError()
 
         self._initial_state = state
-        self._states_mapping[None] = state
+        self._states_mapping.add(None, state)
 
         logger.info(f"Initial state '{state}' is set!")
 
     def add_transition(self, source_state: BaseState, destination_state: BaseState,
                        handler: Union[str, Callable], direction: Optional[str] = None) -> None:
 
-        if not self.is_initialized:
-            raise exceptions.FSMIsNotInitializedError()
+        if isinstance(handler, Callable):
+            handler = handler.__name__
+
+        try:
+            self._check_initialization()
+            self._transitions_keeper.add(source_state=source_state, destination_state=destination_state,
+                                         handler=handler, direction=direction)
+
+            for state in (source_state, destination_state):
+                if not self._states_mapping.check_state(state):
+                    self._states_mapping.add(state.name, state)
+        except Exception as error:
+            raise errors.TransitionAddingError(source_state=source_state, destination_state=destination_state,
+                                               handler=handler, direction=direction) from error
+
+        logger.info(f"Added transition (source_state='{source_state}', "
+                    f"destination_state='{destination_state}', {handler=}, {direction=})!")
+
+    def remove_transition(self, source_state: BaseState, handler: Union[str, Callable],
+                          direction: Optional[str] = None) -> None:
 
         if isinstance(handler, Callable):
             handler = handler.__name__
 
-        self._transitions_keeper.add(source_state, destination_state, handler, direction)
-        for state in (source_state, destination_state):
-            if not self._states_mapping.check_existence(state):
-                self._states_mapping[state.name] = state
+        try:
+            self._check_initialization()
+            destination_state = self._transitions_keeper.remove(source_state=source_state,
+                                                                handler=handler, direction=direction)
 
-        logger.info(f"Added transition ({source_state=}, {destination_state=}, {handler=}, {direction=})!")
+            for state in (source_state, destination_state):
+                if (state != self._initial_state) and (state not in self._transitions_keeper.states):
+                    self._states_mapping.remove_by_state(state)
+        except Exception as error:
+            raise errors.TransitionRemovingError(source_state=source_state,
+                                                 handler=handler, direction=direction) from error
 
-    def remove_transition(self, source_state: BaseState, destination_state: BaseState,
-                          handler: Union[str, Callable], direction: Optional[str] = None) -> None:
+        logger.info(f"Removed transition (source_state='{source_state}', "
+                    f"destination_state='{destination_state}', {handler=}, {direction=})!")
 
-        if not self.is_initialized:
-            raise exceptions.FSMIsNotInitializedError()
-
-        if isinstance(handler, Callable):
-            handler = handler.__name__
-
-        self._transitions_keeper.remove(source_state, destination_state, handler, direction)
-        states = self._transitions_keeper.get_states()
-        for state in (source_state, destination_state):
-            if (state != self._initial_state) and (state not in states):
-                del self._states_mapping[state]
-
-        logger.info(f"Removed transition ({source_state=}, {destination_state=}, {handler=}, {direction=})!")
-
-    def import_transitions(self, transitions: RawTransitionsType, states: Collection[BaseState]) -> None:
+    def import_transitions(self, transitions: RawTransitionsType, states: Iterable[BaseState]) -> None:
 
         states_mapping = {state.name: state for state in states}
         for source_state in transitions:
@@ -141,10 +153,9 @@ class FSM:
 
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
-            destination_state = self._transitions_keeper[source_state][handler][direction]
-        except KeyError:
-            raise exceptions.TransitionNotFoundError(f"not found next transition ({source_state=}, "
-                                                     f"{handler=}, {direction=} {chat_id=}, {user_id=})!")
+            destination_state = self._transitions_keeper.get_destination_state(source_state, handler, direction)
+        except errors.TransitionNotFoundError as error:
+            raise errors.NextTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
         await self._execute_transition_with_magazine(magazine, source_state=source_state,
                                                      destination_state=destination_state,
@@ -160,9 +171,8 @@ class FSM:
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
             destination_state = self._states_mapping.get_state(magazine.penultimate_state)
-        except exceptions.StateNotFoundError:
-            raise exceptions.TransitionNotFoundError(f"not found back transition ({source_state=}, "
-                                                     f"{chat_id=}, {user_id=})!")
+        except errors.StateValueNotFoundError as error:
+            raise errors.BackTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
         await self._execute_transition_with_magazine(magazine, source_state=source_state,
                                                      destination_state=destination_state,
@@ -175,46 +185,34 @@ class FSM:
 
         chat_id, user_id = magazine.chat_id, magazine.user_id
 
-        async with self._locks_storage.acquire(chat_id=chat_id, user_id=user_id):
-            logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
-                         f"({chat_id=}, {user_id=})...")
+        try:
+            async with self._locking_storage.acquire(chat_id=chat_id, user_id=user_id):
+                logger.debug(f"Started transition from '{source_state}' to '{destination_state}' "
+                             f"({chat_id=}, {user_id=})...")
 
-            if processing_kwargs is None:
-                exit_kwargs, enter_kwargs = {}, {}
-            else:
-                exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
-                                             for method in (source_state.process_exit, destination_state.process_enter)]
+                if processing_kwargs is None:
+                    exit_kwargs, enter_kwargs = {}, {}
+                else:
+                    exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
+                                                 for method in (source_state.process_exit,
+                                                                destination_state.process_enter)]
 
-            await source_state.process_exit(*processing_args, **exit_kwargs)
-            logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
-            await destination_state.process_enter(*processing_args, **enter_kwargs)
-            logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
-            await magazine.push(self._states_mapping.get_value(destination_state))
-            logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
+                await source_state.process_exit(*processing_args, **exit_kwargs)
+                logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
+                await destination_state.process_enter(*processing_args, **enter_kwargs)
+                logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
 
-        logger.debug(f"Transition to '{destination_state}' ({chat_id=}, {user_id=}) completed!")
+                if source_state != destination_state:
+                    await magazine.push(self._states_mapping.get_value(destination_state))
+                    logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
 
-    # TODO: implement a mechanism for setting a specific state with a side effect
-    # async def set_transitions_chronology(self, states: List[BaseState], *, chat_id: int, user_id: int) -> None:
-    #
-    #     if not self.is_initialized:
-    #         raise exceptions.FSMIsNotInitialized()
-    #
-    #     for index, source_state in enumerate(states):
-    #         try:
-    #             destination_state = states[index + 1]
-    #         except IndexError:
-    #             break
-    #         if destination_state not in self._transitions_keeper[source_state].values():
-    #             raise exceptions.TransitionsChronologyError(
-    #                 source_state=str(source_state),
-    #                 destination_state=str(destination_state),
-    #                 states=[str(i) for i in states]
-    #             )
-    #
-    #     magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
-    #     for state in states:
-    #         magazine.set(self._states_mapping.get_value(state))
-    #     await magazine.commit()
-    #
-    #     logger.info(f"Chronology of transitions ({', '.join(magazine.states)}) is set ({chat_id=}, {user_id=})!")
+        except errors.TransitionLockIsActiveError:
+            raise errors.TransitionIsLockedError(chat_id=chat_id, user_id=user_id,
+                                                 source_state=source_state, destination_state=destination_state)
+
+        logger.debug(f"Transition from '{source_state}' to '{destination_state}' ({chat_id=}, {user_id=}) completed!")
+
+    def _check_initialization(self):
+
+        if not self.is_initialized:
+            raise errors.FSMIsNotInitializedError()

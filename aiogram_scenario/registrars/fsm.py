@@ -4,7 +4,6 @@ import logging
 
 from aiogram import Dispatcher
 
-from aiogram_scenario.exceptions import StateNotFoundError
 from aiogram_scenario.fsm.states_mapping import StatesMapping
 from .handlers import HandlersRegistrar
 if TYPE_CHECKING:
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def _log_registration_handler(name: str, handler_type: str) -> None:
 
-    logger.debug(f"Handler '{name}' (type='{handler_type}') is registered!")
+    logger.debug(f"Handler {name!r} (type={handler_type!r}) is registered!")
 
 
 class FSMHandlersRegistrar:
@@ -145,13 +144,6 @@ class FSMHandlersRegistrar:
         self._dispatcher.register_poll_answer_handler(callback, *custom_filters, run_task=run_task, **kwargs)
         _log_registration_handler(callback.__qualname__, "poll_answer")
 
-    def _get_state_value(self, state: BaseState) -> Optional[str]:
-
-        try:
-            return self._states_mapping.get_value(state)
-        except KeyError:
-            raise StateNotFoundError(f"state '{state}' was not found among those added to the FSM!")
-
     def _get_state_registrar(self, state: BaseState) -> HandlersRegistrar:
 
-        return HandlersRegistrar(self._dispatcher, self._get_state_value(state))
+        return HandlersRegistrar(self._dispatcher, state, self._states_mapping)

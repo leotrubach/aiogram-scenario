@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Dict, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from aiogram_scenario.registrars.handlers import HandlersRegistrar
@@ -11,13 +11,16 @@ class BaseState:
 
     def __init__(self, *, name: Optional[str] = None):
 
-        self.name = name or self.__class__.__name__
+        self.name = name or type(self).__name__
 
     def __str__(self):
 
         return self.name
 
-    __repr__ = __str__
+    def __repr__(self):
+
+        type_ = type(self)
+        return f"<{type_.__module__}.{type_.__name__} (name={self.name!r})>"
 
     def __eq__(self, other):
 
@@ -28,7 +31,7 @@ class BaseState:
 
     def __hash__(self):
 
-        return hash(tuple(vars(self).values()))
+        return hash(self.__hash_key)
 
     async def process_enter(self, *args, **kwargs) -> None:
 
@@ -38,6 +41,11 @@ class BaseState:
 
         pass
 
-    def register_handlers(self, registrar: HandlersRegistrar, data: dict) -> None:
+    def register_handlers(self, registrar: HandlersRegistrar, data: Dict) -> None:
 
         pass
+
+    @property
+    def __hash_key(self) -> tuple:
+
+        return self.name,

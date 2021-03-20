@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List, Optional, TYPE_CHECKING
 import logging
 
-from aiogram_scenario import exceptions
+from aiogram_scenario import errors
 if TYPE_CHECKING:
     from .storage import BaseStorage
 
@@ -12,21 +12,21 @@ logger = logging.getLogger(__name__)
 
 class Magazine:
 
-    __slots__ = ("_storage", "user_id", "chat_id", "_states")
+    __slots__ = ("user_id", "chat_id", "_storage", "_states")
 
     def __init__(self, storage: BaseStorage, *, chat_id: int, user_id: int):
 
         self.chat_id = chat_id
         self.user_id = user_id
         self._storage = storage
-        self._states: Optional[List[Optional[str]]] = None
+        self._states: Optional[list] = None
 
     def __str__(self):
 
-        class_name = self.__class__.__name__
+        class_name = type(self).__name__
         try:
             return f"<{class_name} {self.states}>"
-        except exceptions.MagazineIsNotLoadedError:
+        except errors.MagazineIsNotLoadedError:
             return f"<{class_name} NOT LOADED!>"
 
     __repr__ = __str__
@@ -38,7 +38,7 @@ class Magazine:
         logger.debug(f"States loaded into the magazine: {self._states}, "
                      f"(chat_id={self.chat_id}, user_id={self.user_id})!")
 
-    def set(self, state: Optional[str]) -> None:
+    def set(self, state) -> None:
 
         try:
             state_index = self.states.index(state)
@@ -47,7 +47,7 @@ class Magazine:
         else:  # exists on the magazine
             del self._states[state_index + 1:]
 
-        logger.debug(f"Magazine set state: '{state}' (chat_id={self.chat_id}, user_id={self.user_id})!")
+        logger.debug(f"Magazine set state: {state!r} (chat_id={self.chat_id}, user_id={self.user_id})!")
 
     async def commit(self) -> None:
 
@@ -55,14 +55,14 @@ class Magazine:
         logger.debug(f"Magazine has committed states {self._states} to storage "
                      f"(chat_id={self.chat_id}, user_id={self.user_id})!")
 
-    async def push(self, state: Optional[str]) -> None:
+    async def push(self, state) -> None:
 
         self.set(state)
         await self.commit()
 
     async def reset(self) -> None:
 
-        await self._storage.set_state(chat=self.chat_id, user=self.user_id, state=None)  # noqa
+        await self._storage.set_state(chat=self.chat_id, user=self.user_id)  # default state is None
 
     @property
     def is_loaded(self) -> bool:
@@ -72,9 +72,7 @@ class Magazine:
     @property
     def states(self) -> List[Optional[str]]:
 
-        if not self.is_loaded:
-            raise exceptions.MagazineIsNotLoadedError(chat_id=self.chat_id, user_id=self.user_id)
-
+        self._check_loading()
         return self._states
 
     @property
@@ -88,5 +86,10 @@ class Magazine:
         try:
             return self.states[-2]
         except IndexError:
-            raise exceptions.StateNotFoundError(f"no penultimate state (chat_id={self.chat_id}, "
-                                                f"user_id={self.user_id})!")
+            raise errors.PenultimateStateNotFoundInMagazineError(chat_id=self.chat_id, user_id=self.user_id,
+                                                                 states=self.states)
+
+    def _check_loading(self):
+
+        if not self.is_loaded:
+            raise errors.MagazineIsNotLoadedError(chat_id=self.chat_id, user_id=self.user_id)
