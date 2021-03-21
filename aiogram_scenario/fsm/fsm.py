@@ -97,6 +97,12 @@ class FSM:
         logger.info(f"Added transition (source_state='{source_state}', "
                     f"destination_state='{destination_state}', {handler=}, {direction=})!")
 
+    def check_transition(self, source_state: BaseState, destination_state: BaseState,
+                         handler: str, direction: Optional[str] = None) -> bool:
+
+        return self._transitions_keeper.check(source_state=source_state, destination_state=destination_state,
+                                              handler=handler, direction=direction)
+
     def remove_transition(self, source_state: BaseState, handler: Union[str, Callable],
                           direction: Optional[str] = None) -> None:
 

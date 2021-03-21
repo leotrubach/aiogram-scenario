@@ -43,6 +43,14 @@ class TransitionsKeeper:
 
         self._states.add(destination_state)
 
+    def check(self, *, source_state: BaseState, destination_state: BaseState,
+              handler: str, direction: Optional[str] = None) -> bool:
+
+        try:
+            return self._transitions[source_state][handler][direction] is destination_state
+        except KeyError:
+            return False
+
     def remove(self, *, source_state: BaseState, handler: str, direction: Optional[str] = None) -> BaseState:
 
         try:
