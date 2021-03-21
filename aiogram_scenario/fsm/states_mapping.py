@@ -26,6 +26,10 @@ class StatesMapping:
         except (errors.StateValueNotFoundError, errors.StateNotFoundError):
             return False
 
+    def check_state(self, state: BaseState) -> bool:
+
+        return state in self._states_values
+
     def remove_by_value(self, value: Optional[str]) -> BaseState:
 
         try:
