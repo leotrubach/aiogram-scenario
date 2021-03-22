@@ -20,9 +20,11 @@ logger = logging.getLogger(__name__)
 
 def _get_spec_kwargs(callback: Callable, kwargs: dict) -> dict:
 
+    # try to resolve decorated callbacks
+    while hasattr(callback, '__wrapped__'):
+        callback = callback.__wrapped__
+
     spec = inspect.getfullargspec(callback)
-    if spec.varkw:
-        return kwargs
 
     return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
 
