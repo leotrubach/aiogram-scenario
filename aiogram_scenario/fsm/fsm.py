@@ -115,7 +115,7 @@ class FSM:
                                                                 handler=handler, direction=direction)
 
             for state in (source_state, destination_state):
-                if (state != self._initial_state) and (state not in self._transitions_keeper.states):
+                if (state is not self._initial_state) and (state not in self._transitions_keeper.states):
                     self._states_mapping.remove_by_state(state)
         except Exception as error:
             raise errors.TransitionRemovingError(source_state=source_state,
@@ -208,7 +208,7 @@ class FSM:
                 await destination_state.process_enter(*processing_args, **enter_kwargs)
                 logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
 
-                if source_state != destination_state:
+                if source_state is not destination_state:
                     await magazine.push(self._states_mapping.get_value(destination_state))
                     logger.debug(f"State '{destination_state}' is set ({chat_id=}, {user_id=})!")
 

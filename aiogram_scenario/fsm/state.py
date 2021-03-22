@@ -20,17 +20,6 @@ class BaseState:
         type_ = type(self)
         return f"<{type_.__module__}.{type_.__name__} (name={self.name!r})>"
 
-    def __eq__(self, other):
-
-        if isinstance(other, BaseState):
-            return self.name == other.name
-
-        return False
-
-    def __hash__(self):
-
-        return hash(self.__hash_key)
-
     async def process_enter(self, *args, **kwargs) -> None:
 
         pass
@@ -42,8 +31,3 @@ class BaseState:
     def register_handlers(self, registrar: HandlersRegistrar, data: Dict) -> None:
 
         pass
-
-    @property
-    def __hash_key(self) -> tuple:
-
-        return self.name,
