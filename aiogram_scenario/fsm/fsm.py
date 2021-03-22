@@ -90,7 +90,7 @@ class FSM:
             for state in (source_state, destination_state):
                 if not self._states_mapping.check_state(state):
                     self._states_mapping.add(state.name, state)
-        except Exception as error:
+        except errors.BaseError as error:
             raise errors.TransitionAddingError(source_state=source_state, destination_state=destination_state,
                                                handler=handler, direction=direction) from error
 
@@ -110,14 +110,13 @@ class FSM:
             handler = handler.__name__
 
         try:
-            self._check_initialization()
             destination_state = self._transitions_keeper.remove(source_state=source_state,
                                                                 handler=handler, direction=direction)
 
             for state in (source_state, destination_state):
                 if (state is not self._initial_state) and (state not in self._transitions_keeper.states):
                     self._states_mapping.remove_by_state(state)
-        except Exception as error:
+        except errors.BaseError as error:
             raise errors.TransitionRemovingError(source_state=source_state,
                                                  handler=handler, direction=direction) from error
 
