@@ -78,7 +78,7 @@ class FSM:
 
         logger.info(f"Initial state '{state}' is set!")
 
-    async def get_current_state(self, chat_id: int, user_id: int) -> BaseState:
+    async def get_current_state(self, *, chat_id: int, user_id: int) -> BaseState:
 
         value = await self.storage.get_state(chat=chat_id, user=user_id)
         state = self._states_mapping.get_state(value)
