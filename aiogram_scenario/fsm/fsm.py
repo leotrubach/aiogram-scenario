@@ -174,7 +174,7 @@ class FSM:
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
             destination_state = self._transitions_keeper.get_destination_state(source_state, handler, direction)
-        except errors.TransitionNotFoundError as error:
+        except errors.BaseError as error:
             raise errors.NextTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
         await self._process_transition_with_magazine(magazine, source_state=source_state,
@@ -191,7 +191,7 @@ class FSM:
         source_state = self._states_mapping.get_state(magazine.current_state)
         try:
             destination_state = self._states_mapping.get_state(magazine.penultimate_state)
-        except errors.StateValueNotFoundError as error:
+        except errors.BaseError as error:
             raise errors.BackTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
         await self._process_transition_with_magazine(magazine, source_state=source_state,
