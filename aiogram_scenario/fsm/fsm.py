@@ -147,14 +147,20 @@ class FSM:
 
         logger.info(f"Transitions successfully imported!")
 
-    async def execute_transition(self, *, chat_id: int, user_id: int, source_state: BaseState,
-                                 destination_state: BaseState, processing_args: tuple = (),
+    async def execute_transition(self, *, chat_id: int, user_id: int, destination_state: BaseState,
+                                 process_exit: bool = True, processing_args: tuple = (),
                                  processing_kwargs: Optional[dict] = None) -> None:
+
+        if destination_state not in self._transitions_keeper.states:
+            raise errors.StateIsNotUsedInTransitions(destination_state)
 
         magazine = self.storage.get_magazine(chat=chat_id, user=user_id)
         await magazine.load()
-        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+
+        source_state = self._states_mapping.get_state(magazine.current_state)
+        await self._process_transition_with_magazine(magazine, source_state=source_state,
                                                      destination_state=destination_state,
+                                                     process_exit=process_exit,
                                                      processing_args=processing_args,
                                                      processing_kwargs=processing_kwargs)
 
@@ -171,7 +177,7 @@ class FSM:
         except errors.TransitionNotFoundError as error:
             raise errors.NextTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
-        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+        await self._process_transition_with_magazine(magazine, source_state=source_state,
                                                      destination_state=destination_state,
                                                      processing_args=processing_args,
                                                      processing_kwargs=processing_kwargs)
@@ -188,13 +194,14 @@ class FSM:
         except errors.StateValueNotFoundError as error:
             raise errors.BackTransitionNotFoundError(chat_id=chat_id, user_id=user_id) from error
 
-        await self._execute_transition_with_magazine(magazine, source_state=source_state,
+        await self._process_transition_with_magazine(magazine, source_state=source_state,
                                                      destination_state=destination_state,
                                                      processing_args=processing_args,
                                                      processing_kwargs=processing_kwargs)
 
-    async def _execute_transition_with_magazine(self, magazine: Magazine, *, source_state: BaseState,
-                                                destination_state: BaseState, processing_args: tuple = (),
+    async def _process_transition_with_magazine(self, magazine: Magazine, *, source_state: BaseState,
+                                                destination_state: BaseState, process_exit: bool = True,
+                                                processing_args: tuple = (),
                                                 processing_kwargs: Optional[dict] = None) -> None:
 
         chat_id, user_id = magazine.chat_id, magazine.user_id
@@ -211,8 +218,10 @@ class FSM:
                                                  for method in (source_state.process_exit,
                                                                 destination_state.process_enter)]
 
-                await source_state.process_exit(*processing_args, **exit_kwargs)
-                logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
+                if process_exit:
+                    await source_state.process_exit(*processing_args, **exit_kwargs)
+                    logger.debug(f"Produced exit from state '{source_state}' ({chat_id=}, {user_id=})!")
+
                 await destination_state.process_enter(*processing_args, **enter_kwargs)
                 logger.debug(f"Produced enter to state '{destination_state}' ({chat_id=}, {user_id=})!")
 

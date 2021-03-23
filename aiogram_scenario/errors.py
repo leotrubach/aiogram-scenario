@@ -261,3 +261,16 @@ class StateValueIsAlreadyExistsError(BaseError):
     def message(self) -> str:
 
         return f"value {self.value!r} is already exists!"
+
+
+class StateIsNotUsedInTransitions(BaseError):
+
+    def __init__(self, state: BaseState):
+
+        self.state = state
+
+    @property
+    def message(self) -> str:
+
+        return (f"The state '{self.state}' was not found in the transitions, "
+                f"which means that it is impossible to make a transition either to it or from it!")
