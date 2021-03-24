@@ -1,0 +1,97 @@
+from abc import ABC, abstractmethod
+from typing import Optional
+import re
+
+from aiogram_scenario.fsm.types import RawTransitionsType
+
+
+def _get_new_name(name: str, prefix: Optional[str], postfix: Optional[str]) -> str:
+
+    if prefix and postfix:
+        return f"{prefix}{name}{postfix}"
+    elif prefix:
+        return f"{prefix}{name}"
+    elif postfix:
+        return f"{name}{postfix}"
+    else:
+        return name
+
+
+def _check_state_name(name: str) -> None:
+
+    if re.fullmatch(r"[a-zA-Z_]\w*", name) is None:
+        raise ValueError(f"incorrect state name '{name}'!")
+
+
+def _check_handler_name(name: str) -> None:
+
+    if re.fullmatch(r"[a-zA-Z_]\w*", name) is None:
+        raise ValueError(f"incorrect handler name '{name}'!")
+
+
+def _check_direction_name(name: str) -> None:
+
+    if (name is not None) and re.fullmatch(r"\S+", name) is None:
+        raise ValueError(f"incorrect direction name '{name}'!")
+
+
+def _check_naming(transitions: RawTransitionsType) -> None:
+
+    for source_state in transitions:
+        _check_state_name(source_state)
+        for handler in transitions[source_state]:
+            _check_handler_name(handler)
+            for direction in transitions[source_state][handler]:
+                _check_direction_name(direction)
+                _check_state_name(transitions[source_state][handler][direction])
+
+
+def _get_augmented_transitions(transitions: RawTransitionsType, handlers_prefix: Optional[str],
+                               handlers_postfix: Optional[str], states_prefix: Optional[str],
+                               states_postfix: Optional[str]) -> RawTransitionsType:
+
+    augmented_transitions = {}
+    for source_state in transitions:
+        new_source_state = _get_new_name(source_state, states_prefix, states_postfix)
+        augmented_transitions[new_source_state] = {}
+
+        for handler in transitions[source_state]:
+            new_handler = _get_new_name(handler, handlers_prefix, handlers_postfix)
+            augmented_transitions[new_source_state][new_handler] = {}
+
+            for direction, destination_state in transitions[source_state][handler].items():
+                new_destination_state = _get_new_name(destination_state, states_prefix, states_postfix)
+                augmented_transitions[new_source_state][new_handler][direction] = new_destination_state
+
+    return augmented_transitions
+
+
+class AbstractTransitionsAdapter(ABC):
+
+    def fetch_content(self, filename: str, encoding: str) -> str:
+
+        with open(filename, encoding=encoding) as file_wrapper:
+            content = file_wrapper.read()
+
+        return content
+
+    @abstractmethod
+    def parse_transitions(self, content: str) -> RawTransitionsType:
+
+        pass
+
+    def get_transitions(self, filename: str, encoding: str = "UTF-8", *,
+                        handlers_prefix: Optional[str] = None,
+                        handlers_postfix: Optional[str] = None,
+                        states_prefix: Optional[str] = None,
+                        states_postfix: Optional[str] = None) -> RawTransitionsType:
+
+        content = self.fetch_content(filename, encoding)
+        transitions = self.parse_transitions(content)
+
+        _check_naming(transitions)
+        if any((handlers_prefix, handlers_postfix, states_prefix, states_postfix)):
+            transitions = _get_augmented_transitions(transitions, handlers_prefix, handlers_postfix,
+                                                     states_prefix, states_postfix)
+
+        return transitions

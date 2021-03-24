@@ -1,18 +1,29 @@
-from typing import Optional, Collection, List
+from typing import Collection, FrozenSet
 
-from .state import AbstractState
+from .state import BaseState
 
 
-class BaseStatesGroup:
+class StatesGroup:
 
-    @classmethod
-    def select(cls, *, exclude: Optional[Collection[AbstractState]] = None) -> List[AbstractState]:
+    def __init__(self, *states: BaseState):
 
-        cls_values = vars(cls).values()
+        self._states = frozenset(states)
 
-        if exclude is None:
-            states = [i for i in cls_values if isinstance(i, AbstractState)]
+    def __len__(self):
+
+        return len(self._states)
+
+    def __iter__(self):
+
+        return iter(self._states)
+
+    def __contains__(self, state: BaseState):
+
+        return state in self._states
+
+    def select(self, *, exclude: Collection[BaseState] = ()) -> FrozenSet[BaseState]:
+
+        if not exclude:
+            return self._states
         else:
-            states = [i for i in cls_values if isinstance(i, AbstractState) and (i not in exclude)]
-
-        return states
+            return frozenset({i for i in self._states if i not in exclude})

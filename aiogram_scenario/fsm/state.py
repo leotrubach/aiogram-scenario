@@ -1,29 +1,24 @@
-from abc import ABC, abstractmethod
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, Dict, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aiogram_scenario.registrars.handlers import HandlersRegistrar
 
 
-class AbstractState(ABC):
+class BaseState:
 
-    __slots__ = ("name", "_is_initial")
+    def __init__(self, *, name: Optional[str] = None):
 
-    def __init__(self, is_initial: bool = False):
-
-        self.name = self.__class__.__name__
-        self._is_initial = is_initial
+        self.name = name or type(self).__name__
 
     def __str__(self):
 
         return self.name
 
-    __repr__ = __str__
+    def __repr__(self):
 
-    def __eq__(self, other):
-
-        return self.name == other
-
-    def __hash__(self):
-
-        return hash(self.name)
+        type_ = type(self)
+        return f"<{type_.__module__}.{type_.__name__} (name={self.name!r})>"
 
     async def process_enter(self, *args, **kwargs) -> None:
 
@@ -33,20 +28,6 @@ class AbstractState(ABC):
 
         pass
 
-    @abstractmethod
-    def register_handlers(self, *args, **reg_kwargs) -> None:
+    def register_handlers(self, registrar: HandlersRegistrar, data: Dict) -> None:
 
         pass
-
-    @property
-    def is_initial(self) -> bool:
-
-        return self._is_initial
-
-    @property
-    def raw_value(self) -> Optional[str]:
-
-        if self._is_initial:
-            return None
-        else:
-            return str(self)
