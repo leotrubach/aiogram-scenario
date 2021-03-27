@@ -68,7 +68,8 @@ def _get_augmented_transitions(transitions: RawTransitionsType, handlers_prefix:
 
 class AbstractTransitionsAdapter(ABC):
 
-    def fetch_content(self, filename: str, encoding: str) -> str:
+    # noinspection PyMethodMayBeStatic
+    def _fetch(self, filename: str, encoding: str) -> str:
 
         with open(filename, encoding=encoding) as file_wrapper:
             content = file_wrapper.read()
@@ -76,18 +77,18 @@ class AbstractTransitionsAdapter(ABC):
         return content
 
     @abstractmethod
-    def parse_transitions(self, content: str) -> RawTransitionsType:
+    def _parse(self, content: str) -> RawTransitionsType:
 
         pass
 
-    def get_transitions(self, filename: str, encoding: str = "UTF-8", *,
-                        handlers_prefix: Optional[str] = None,
-                        handlers_postfix: Optional[str] = None,
-                        states_prefix: Optional[str] = None,
-                        states_postfix: Optional[str] = None) -> RawTransitionsType:
+    def load(self, filename: str, encoding: str = "UTF-8", *,
+             handlers_prefix: Optional[str] = None,
+             handlers_postfix: Optional[str] = None,
+             states_prefix: Optional[str] = None,
+             states_postfix: Optional[str] = None) -> RawTransitionsType:
 
-        content = self.fetch_content(filename, encoding)
-        transitions = self.parse_transitions(content)
+        content = self._fetch(filename, encoding)
+        transitions = self._parse(content)
 
         _check_naming(transitions)
         if any((handlers_prefix, handlers_postfix, states_prefix, states_postfix)):
