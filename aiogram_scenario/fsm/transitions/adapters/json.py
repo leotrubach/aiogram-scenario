@@ -1,12 +1,12 @@
-from typing import Dict
 import json
 
 from .base import AbstractTransitionsAdapter
+from aiogram_scenario.fsm.types import RawTransitionsType
 
 
 class JSONTransitionsAdapter(AbstractTransitionsAdapter):
 
-    def _parse(self, content: str) -> Dict[str, Dict[str, str]]:
+    def _parse(self, content: str) -> RawTransitionsType:
 
         raw_transitions = json.loads(content)
         transitions = {}
