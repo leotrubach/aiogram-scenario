@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Collection, Iterable, Set, Optional, TYPE_CHECKING
+from typing import Callable, Iterable, Set, Optional, TYPE_CHECKING
 import logging
 
 from aiogram import Dispatcher
@@ -48,7 +48,7 @@ class FSMHandlersRegistrar:
 
         return handlers
 
-    def register_states_handlers(self, states: Collection[BaseState], data: Optional[dict] = None) -> None:
+    def register_states_handlers(self, states: Iterable[BaseState], data: Optional[dict] = None) -> None:
 
         if data is None:
             data = {}
