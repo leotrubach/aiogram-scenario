@@ -6,7 +6,7 @@ from .fsm.states_group import StatesGroupMixin
 from .registrars.handlers import HandlersRegistrar
 
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 __all__ = [
     "FSM",
     "FSMTrigger",
