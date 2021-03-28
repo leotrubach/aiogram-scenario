@@ -2,7 +2,7 @@ from .fsm.fsm import FSM
 from .fsm.trigger import FSMTrigger
 from .fsm.middleware import FSMMiddleware
 from .fsm.state import BaseState
-from .fsm.states_group import StatesGroup
+from .fsm.states_group import StatesGroupMixin
 from .registrars.handlers import HandlersRegistrar
 
 
@@ -12,7 +12,7 @@ __all__ = [
     "FSMTrigger",
     "FSMMiddleware",
     "BaseState",
-    "StatesGroup",
+    "StatesGroupMixin",
     "HandlersRegistrar",
     "__version__"
 ]

@@ -1,29 +1,31 @@
-from typing import Collection, FrozenSet
+from typing import Collection, List
 
 from .state import BaseState
 
 
-class StatesGroup:
-
-    def __init__(self, *states: BaseState):
-
-        self._states = frozenset(states)
+class StatesGroupMixin:
 
     def __len__(self):
 
-        return len(self._states)
+        return len(self.select())
+
+    def __repr__(self):
+
+        return f"<{type(self).__name__} ({', '.join(i.name for i in self.select())})>"
 
     def __iter__(self):
 
-        return iter(self._states)
+        return iter(self.select())
 
     def __contains__(self, state: BaseState):
 
-        return state in self._states
+        return state in self.select()
 
-    def select(self, *, exclude: Collection[BaseState] = ()) -> FrozenSet[BaseState]:
+    def select(self, *, exclude: Collection[BaseState] = ()) -> List[BaseState]:
 
-        if not exclude:
-            return self._states
-        else:
-            return frozenset({i for i in self._states if i not in exclude})
+        states = [i for i in vars(self).values() if isinstance(i, BaseState)]
+
+        if exclude:
+            states = list(filter(lambda state: state not in exclude, states))
+
+        return states
