@@ -1,4 +1,3 @@
-import inspect
 from typing import Optional, Callable, Iterable, Union
 import logging
 
@@ -12,20 +11,10 @@ from .transitions.locking.storages.base import AbstractLockingStorage
 from .transitions.locking.storages.memory import MemoryLockingStorage
 from .types import RawTransitionsType
 from aiogram_scenario.registrars.fsm import FSMHandlersRegistrar
-from aiogram_scenario import errors
+from aiogram_scenario import errors, helpers
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_spec_kwargs(callback: Callable, kwargs: dict) -> dict:
-
-    spec = inspect.getfullargspec(callback)
-
-    if spec.varkw:
-        return kwargs
-    else:
-        return {k: v for k, v in kwargs.items() if k in set(spec.args + spec.kwonlyargs)}
 
 
 class FSM:
@@ -211,11 +200,10 @@ class FSM:
                              f"({chat_id=}, {user_id=})...")
 
                 if processing_kwargs is None:
-                    exit_kwargs, enter_kwargs = {}, {}
+                    exit_kwargs = enter_kwargs = {}
                 else:
-                    exit_kwargs, enter_kwargs = [_get_spec_kwargs(method, processing_kwargs)
-                                                 for method in (source_state.process_exit,
-                                                                destination_state.process_enter)]
+                    exit_kwargs, enter_kwargs = [helpers.get_kwargs_from_spec(spec, processing_kwargs)
+                                                 for spec in (source_state.exit_spec, destination_state.enter_spec)]
 
                 if process_exit:
                     await source_state.process_exit(*processing_args, **exit_kwargs)
